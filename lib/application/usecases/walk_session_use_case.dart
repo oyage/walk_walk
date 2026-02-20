@@ -1,5 +1,4 @@
 import 'package:uuid/uuid.dart';
-import '../../domain/models/geo_point.dart';
 import '../../domain/models/guidance_message.dart';
 import '../../domain/models/app_settings.dart';
 import '../../infrastructure/location/location_service.dart';
@@ -63,7 +62,6 @@ class WalkSessionUseCase {
       _backgroundWorker = BackgroundWorker(
         _locationService,
         this,
-        _fetchNearbyInfoUseCase,
       );
       await _backgroundWorker!.start(_currentSettings!);
     }

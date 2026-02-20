@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -62,6 +63,45 @@ class HomeScreen extends ConsumerWidget {
                     )
                   else
                     const Text('位置情報を取得できませんでした'),
+                  if (kDebugMode) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        TextButton.icon(
+                          onPressed: locationState.isLoading
+                              ? null
+                              : () async {
+                                  await ref
+                                      .read(currentLocationProvider.notifier)
+                                      .requestPermissionAndFetch();
+                                },
+                          icon: const Icon(Icons.location_on, size: 18),
+                          label: const Text('権限をリクエストして再取得'),
+                        ),
+                        TextButton.icon(
+                          onPressed: () async {
+                            final opened = await ref
+                                .read(currentLocationProvider.notifier)
+                                .openAppSettings();
+                            if (context.mounted && !opened) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'この端末では設定画面を開けません。'
+                                    '端末の設定アプリから位置情報を許可してください。',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.settings, size: 18),
+                          label: const Text('設定を開く'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

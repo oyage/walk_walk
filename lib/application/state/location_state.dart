@@ -53,10 +53,34 @@ class CurrentLocationNotifier extends StateNotifier<CurrentLocationState> {
       final location = await _locationService.getCurrentLocation();
       state = state.copyWith(location: location, isLoading: false);
     } catch (e) {
+      final message = e.toString().replaceFirst('Exception: ', '');
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: message,
       );
     }
+  }
+
+  /// 権限をリクエストしてから現在地を取得（DEV用）
+  Future<void> requestPermissionAndFetch() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _locationService.requestPermission();
+      await fetchCurrentLocation();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e is Exception
+            ? (e.toString().replaceFirst('Exception: ', ''))
+            : '位置情報の取得に失敗しました。'
+                'スマートフォンまたは実機でお試しください。',
+      );
+    }
+  }
+
+  /// アプリ設定画面を開く（DEV用・権限が「許可しない」のとき）
+  /// 開けた場合 true、開けなかった場合（未対応端末等）false
+  Future<bool> openAppSettings() async {
+    return await _locationService.openAppSettings();
   }
 }

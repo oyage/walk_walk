@@ -3,7 +3,6 @@ import '../../domain/models/app_settings.dart';
 import '../location/location_service.dart';
 import '../notifications/notification_service.dart';
 import '../logging/app_logger.dart';
-import '../../application/usecases/fetch_nearby_info_use_case.dart';
 import '../../application/usecases/walk_session_use_case.dart';
 
 /// バックグラウンドワーカー
@@ -14,13 +13,11 @@ class BackgroundWorker {
   Timer? _guidanceTimer;
   final LocationService _locationService;
   final WalkSessionUseCase _walkSessionUseCase;
-  final FetchNearbyInfoUseCase _fetchNearbyInfoUseCase;
   AppSettings? _currentSettings;
 
   BackgroundWorker(
     this._locationService,
     this._walkSessionUseCase,
-    this._fetchNearbyInfoUseCase,
   );
 
   /// バックグラウンドワーカーを開始

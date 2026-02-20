@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/app_settings.dart';
 import '../../infrastructure/storage/settings_repository.dart';
-import '../../application/state/walk_session_state.dart';
 
 /// 設定画面
 class SettingsScreen extends ConsumerStatefulWidget {
