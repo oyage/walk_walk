@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import '../models/geo_point.dart';
 import '../models/app_settings.dart';
 
@@ -61,12 +62,12 @@ class GuidanceThrottle {
     const double earthRadius = 6371000; // meters
     final dLat = _toRadians(lat2 - lat1);
     final dLon = _toRadians(lon2 - lon1);
-    final a = (dLat / 2).sin() * (dLat / 2).sin() +
-        _toRadians(lat1).cos() *
-            _toRadians(lat2).cos() *
-            (dLon / 2).sin() *
-            (dLon / 2).sin();
-    final c = 2 * (a.sqrt()).asin();
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    final c = 2 * math.asin(math.sqrt(a));
     return earthRadius * c;
   }
 

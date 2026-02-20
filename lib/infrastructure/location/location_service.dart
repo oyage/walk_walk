@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../domain/models/location_sample.dart';
 import '../../domain/models/geo_point.dart';
@@ -14,11 +15,12 @@ enum LocationPermissionStatus {
 class LocationService {
   /// 現在地を1回取得
   Future<LocationSample> getCurrentLocation() async {
-    final position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
 
-    return LocationSample(
+      return LocationSample(
       point: GeoPoint(
         lat: position.latitude,
         lng: position.longitude,
@@ -26,7 +28,13 @@ class LocationService {
       timestamp: position.timestamp ?? DateTime.now(),
       accuracy: position.accuracy,
       altitude: position.altitude,
-    );
+      );
+    } on MissingPluginException catch (_) {
+      throw Exception(
+        '位置情報はこの端末では利用できません。'
+        'スマートフォンまたは実機でお試しください。',
+      );
+    }
   }
 
   /// 位置情報ストリーム（バックグラウンド用）
@@ -53,12 +61,17 @@ class LocationService {
 
   /// 権限状態を取得
   Future<LocationPermissionStatus> getPermissionStatus() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return LocationPermissionStatus.denied;
+      }
+    } on MissingPluginException catch (_) {
       return LocationPermissionStatus.denied;
     }
 
-    final permission = await Geolocator.checkPermission();
+    try {
+      final permission = await Geolocator.checkPermission();
     switch (permission) {
       case LocationPermission.denied:
         return LocationPermissionStatus.denied;
@@ -71,16 +84,24 @@ class LocationService {
       case LocationPermission.unableToDetermine:
         return LocationPermissionStatus.denied;
     }
+    } on MissingPluginException catch (_) {
+      return LocationPermissionStatus.denied;
+    }
   }
 
   /// 権限をリクエスト
   Future<LocationPermissionStatus> requestPermission() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw Exception('位置情報サービスが無効です');
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('位置情報サービスが無効です');
+      }
+    } on MissingPluginException catch (_) {
+      return LocationPermissionStatus.denied;
     }
 
-    LocationPermission permission = await Geolocator.checkPermission();
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
@@ -104,6 +125,9 @@ class LocationService {
         return LocationPermissionStatus.always;
       default:
         return LocationPermissionStatus.denied;
+    }
+    } on MissingPluginException catch (_) {
+      return LocationPermissionStatus.denied;
     }
   }
 }

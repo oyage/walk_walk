@@ -1,6 +1,20 @@
-# Walk Walk アプリ
+# Walk Walk
 
-現在地を一定間隔で取得し、周辺の地域名・主要ランドマーク・店舗情報を取得して音声で案内するお散歩支援アプリです。
+現在地を一定間隔で取得し、周辺の地域名・主要ランドマーク・店舗情報を取得して音声で案内する**お散歩支援アプリ**です。
+
+---
+
+## 目次
+
+- [セットアップ](#セットアップ)
+- [機能](#機能)
+- [設定項目](#設定項目)
+- [設計](#設計)
+- [技術スタック](#技術スタック)
+- [必要な権限](#必要な権限)
+- [注意事項・トラブルシューティング](#注意事項トラブルシューティング)
+
+---
 
 ## セットアップ
 
@@ -12,21 +26,22 @@ flutter pub get
 
 ### 2. 環境変数の設定
 
-`.env.example`をコピーして`.env`ファイルを作成し、Google APIキーを設定してください：
+`.env.example` をコピーして `.env` を作成し、Google API キーを設定します。
 
 ```bash
 cp .env.example .env
 ```
 
-`.env`ファイルに以下を設定：
+`.env` の例：
+
 ```
 GOOGLE_PLACES_API_KEY=your_api_key_here
 GOOGLE_GEOCODING_API_KEY=your_api_key_here
 ```
 
-### 3. データベースコード生成
+`pubspec.yaml` の `assets` に `.env` が含まれているため、アプリから読み込まれます。
 
-Driftデータベースのコードを生成する必要があります：
+### 3. データベースコード生成（Drift）
 
 ```bash
 dart run build_runner build --delete-conflicting-outputs
@@ -38,65 +53,168 @@ dart run build_runner build --delete-conflicting-outputs
 flutter run
 ```
 
+**Linux デスクトップ**で実行する場合は、事前に以下をインストールしてください。
+
+```bash
+sudo apt install cmake ninja-build g++ pkg-config libgtk-3-dev lld
+```
+
+- `CXX=clang++` を使う場合は `clang` も必要です。未導入の場合は `unset CXX` または `CXX=g++ flutter run` を推奨します。
+
+---
+
 ## 機能
 
-- **位置情報の定期取得**: ユーザー設定可能な間隔で現在地を取得
-- **逆ジオコーディング**: 座標から地域名を取得
-- **POI検索**: Google Places APIを使用して周辺のランドマーク・店舗を検索
-- **音声案内**: TTS（Text-to-Speech）による音声案内
-- **バックグラウンド動作**: アプリを閉じても案内を続ける（設定で有効/無効可能）
-- **案内履歴**: 過去の案内履歴を保存・表示
-- **案内抑制**: クールダウン・距離閾値・重複抑制による適切な案内頻度の制御
+| 機能 | 説明 |
+|------|------|
+| **位置情報の定期取得** | 設定した間隔（分刻み）で現在地を取得 |
+| **逆ジオコーディング** | 座標から地域名を取得（Google Geocoding API） |
+| **POI 検索** | Google Places API で周辺のランドマーク・店舗を検索 |
+| **音声案内** | TTS による案内文の読み上げ |
+| **バックグラウンド動作** | アプリを閉じても案内を継続（設定で ON/OFF） |
+| **案内履歴** | 案内メッセージの保存・一覧表示 |
+| **案内抑制** | クールダウン・距離閾値・重複抑制で案内頻度を調整 |
+
+---
 
 ## 設定項目
 
-- 位置情報取得間隔（10-300秒）
-- 検索半径（50-1000メートル）
-- 案内クールダウン（10-120秒）
-- 距離閾値（10-100メートル）
-- 履歴保持期間（24-720時間）
-- TTS速度（0.0-1.0）
-- TTS言語（日本語/英語）
-- バックグラウンド動作の有効/無効
+| 項目 | 範囲・単位 | 説明 |
+|------|------------|------|
+| 位置情報取得間隔 | 10〜30 **分**（分刻み） | 現在地を取得する間隔 |
+| 検索半径 | 100〜2000 **m** | 周辺検索の半径 |
+| 案内クールダウン | 10〜120 秒 | 同一案内の最小間隔 |
+| 距離閾値 | 10〜100 m | 前回案内地点からの最小移動距離 |
+| 履歴保持期間 | 24〜720 時間 | 案内履歴の保持期間 |
+| TTS 速度 | 0.0〜1.0 | 読み上げ速度 |
+| TTS 言語 | 日本語 / 英語 | 読み上げ言語 |
+| バックグラウンド動作 | ON / OFF | アプリ非表示時の案内継続 |
+
+---
+
+## 設計
+
+### アーキテクチャ方針
+
+**クリーンアーキテクチャ**を採用し、**Riverpod** で状態を管理しています。  
+ドメインは外部に依存せず、UI・インフラはドメインのインターフェースに依存します。
+
+```
+presentation → application → domain
+                  ↑
+            infrastructure
+```
+
+### レイヤー構成
+
+| レイヤー | パス | 役割 |
+|----------|------|------|
+| **domain** | `lib/domain/` | モデル定義とサービスインターフェース（GeocodingProvider, PlacesProvider, GuidanceFormatter 等） |
+| **application** | `lib/application/` | ユースケース（WalkSessionUseCase, FetchNearbyInfoUseCase）と Riverpod による状態管理 |
+| **infrastructure** | `lib/infrastructure/` | 位置・TTS・通知・DB・外部 API の実装 |
+| **presentation** | `lib/presentation/` | 画面（Home, Settings, Policy）と UI のみ |
+
+### 主要コンポーネント
+
+- **WalkSessionUseCase**: お散歩の開始/停止、案内実行のトリガー
+- **FetchNearbyInfoUseCase**: 現在地から逆ジオコーディング + POI 検索 → `NearbyContext` を生成
+- **GuidanceThrottle**: クールダウン・距離・重複を考慮して「案内するか」を判定
+- **GuidanceFormatter**: `NearbyContext` と設定から案内文を生成
+- **BackgroundWorker**: バックグラウンドでの位置監視と定期案内
+- **CacheRepository**: ジオコーディング・Places のキャッシュ（Drift）
+- **GuidanceHistoryRepository**: 案内メッセージの永続化（Drift）
+
+### データフロー（1 回の案内）
+
+1. 現在地取得（LocationService）
+2. ジオハッシュでキャッシュ確認 → 未ヒットなら Geocoding API / Places API 呼び出し → キャッシュ保存
+3. `NearbyContext`（地域名・ランドマーク・店舗）を組み立て
+4. GuidanceThrottle で「案内するか」判定
+5. GuidanceFormatter で案内文を生成
+6. TTS で読み上げ
+7. GuidanceHistoryRepository に保存
+
+### ドメインモデル（代表）
+
+- **GeoPoint**: 緯度・経度
+- **LocationSample**: 位置 + タイムスタンプ・精度・高度
+- **NearbyContext**: 地域名、ランドマーク一覧、店舗一覧
+- **GuidanceMessage**: 案内 1 件（ID・文言・日時・座標・タグ等）
+- **AppSettings**: 上記「設定項目」の永続化用モデル
+
+### ストレージ設計
+
+- **SharedPreferences**: アプリ設定（AppSettings）の保存
+- **Drift (SQLite)**:
+  - ジオコーディングキャッシュ（キー・地域名・有効期限）
+  - Places キャッシュ（キー・JSON・有効期限）
+  - 案内メッセージ履歴（ID・文言・日時・座標・地域名・タグ JSON）
+
+---
+
+## 技術スタック
+
+| 用途 | パッケージ |
+|------|------------|
+| 状態管理 | flutter_riverpod ^2.4.9 |
+| 位置情報 | geolocator ^10.1.0, geolocator_linux ^0.2.0 |
+| 音声合成 | flutter_tts ^4.0.0 |
+| 通知 | flutter_local_notifications ^16.3.0 |
+| 設定保存 | shared_preferences ^2.2.2 |
+| ローカル DB | drift ^2.14.0, sqlite3_flutter_libs, path_provider, path |
+| HTTP | http ^1.1.0, dio ^5.4.0 |
+| ジオハッシュ | dart_geohash ^2.1.0 |
+| 環境変数 | flutter_dotenv ^5.1.0 |
+| ログ | logger ^2.0.2 |
+| その他 | uuid, intl |
+
+- Flutter SDK: 3.0+
+- Dart SDK: >=3.0.0 <4.0.0
+
+---
 
 ## 必要な権限
 
 ### Android
-- `ACCESS_FINE_LOCATION`: 正確な位置情報の取得
-- `ACCESS_COARSE_LOCATION`: おおよその位置情報の取得
-- `FOREGROUND_SERVICE`: バックグラウンド動作のためのフォアグラウンドサービス
-- `POST_NOTIFICATIONS`: 通知の表示
+
+- `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION`: 位置情報
+- `FOREGROUND_SERVICE`: バックグラウンド用フォアグラウンドサービス
+- `POST_NOTIFICATIONS`: 通知表示
+- `INTERNET`: API 通信
 
 ### iOS
-- `NSLocationWhenInUseUsageDescription`: 使用中の位置情報アクセス
-- `NSLocationAlwaysAndWhenInUseUsageDescription`: 常時位置情報アクセス（バックグラウンド用）
-- `UIBackgroundModes: location`: バックグラウンドでの位置情報更新
 
-## アーキテクチャ
+- `NSLocationWhenInUseUsageDescription`: 使用中の位置情報
+- `NSLocationAlwaysAndWhenInUseUsageDescription`: 常時位置情報（バックグラウンド用）
+- `UIBackgroundModes: location`: バックグラウンド位置更新
 
-クリーンアーキテクチャ + Riverpod（状態管理）を使用しています。
+### Linux（デスクトップ）
 
-- **domain**: ドメインモデルとサービスインターフェース
-- **application**: ユースケースと状態管理
-- **infrastructure**: 外部API、データベース、サービス実装
-- **presentation**: UI実装
+- 位置情報は geolocator_linux に依存。未実装の場合は「位置情報はこの端末では利用できません」と表示され、実機・エミュレータでの利用を案内します。
 
-## 技術スタック
+---
 
-- Flutter 3.0+
-- flutter_riverpod 2.4.9
-- geolocator 10.1.0
-- flutter_tts 4.0.0
-- drift 2.14.0
-- shared_preferences 2.2.2
-- dio 5.4.0
-- geohash 2.0.1
-- flutter_dotenv 5.1.0
-- logger 2.0.2
+## 注意事項・トラブルシューティング
 
-## 注意事項
+1. **API 制限**  
+   Google Places / Geocoding API にはリクエスト制限があります。キャッシュで同一条件の再取得を抑えています。
 
-1. **API制限**: Google Places APIにはリクエスト制限があるため、キャッシュを活用しています
-2. **バッテリー消費**: 位置情報の取得間隔を適切に設定し、バッテリー消費を最小化してください
-3. **プライバシー**: 位置情報の取り扱いについて、プライバシーポリシーを明確に記載してください
-4. **実機テスト**: 特にバックグラウンド処理は実機でのテストが必須です
+2. **バッテリー**  
+   位置情報取得間隔を 10〜30 分の範囲で大きくすると、バッテリー負荷を抑えられます。
+
+3. **プライバシー**  
+   位置情報の利用目的はアプリ内のプライバシーポリシーで明示してください。
+
+4. **実機テスト**  
+   バックグラウンド・位置・通知は実機での動作確認を推奨します。
+
+5. **デスクトップ（Linux）**  
+   - 位置情報が使えない場合は上記のメッセージが表示されます。  
+   - 通知は `LinuxInitializationSettings` / `LinuxNotificationDetails` を指定して初期化しています。
+
+6. **設定画面でクラッシュする場合**  
+   古い設定（例: 5 分間隔・50 m 半径）が保存されていると、新しい範囲（10〜30 分・100〜2000 m）とずれることがあります。アプリは読み込み時に範囲内へ正規化するため、最新版で再起動すれば解消されます。
+
+7. **ビルドエラー**  
+   - `dart run build_runner build --delete-conflicting-outputs` を実行していないと Drift の生成コードがなくて失敗します。  
+   - Linux でリンカエラー（`ld.lld` 等）が出る場合は `lld` のインストール（`sudo apt install lld`）を試してください。

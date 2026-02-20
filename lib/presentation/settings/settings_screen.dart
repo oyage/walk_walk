@@ -24,7 +24,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final repository = SettingsRepository();
-    final settings = await repository.load();
+    var settings = await repository.load();
+    // 位置情報取得間隔 10-30分、検索半径 100-2000m に正規化（旧設定の互換）
+    settings = settings.copyWith(
+      locationUpdateIntervalSeconds:
+          settings.locationUpdateIntervalSeconds.clamp(600, 1800),
+      searchRadiusMeters: settings.searchRadiusMeters.clamp(100, 2000),
+    );
     setState(() {
       _settings = settings;
       _isLoading = false;
@@ -44,9 +50,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        appBar: AppBar(title: Text('設定')),
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        appBar: AppBar(title: const Text('設定')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -66,25 +72,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           _buildSectionTitle('位置情報'),
           _buildSliderSetting(
-            '位置情報取得間隔（秒）',
-            _settings.locationUpdateIntervalSeconds.toDouble(),
+            '位置情報取得間隔（分）',
+            (_settings.locationUpdateIntervalSeconds / 60.0).clamp(10.0, 30.0),
             10,
-            300,
+            30,
             (value) {
               setState(() {
                 _settings = _settings.copyWith(
-                  locationUpdateIntervalSeconds: value.round(),
+                  locationUpdateIntervalSeconds: (value.round() * 60),
                 );
               });
             },
-            '${_settings.locationUpdateIntervalSeconds}秒',
+            '${(_settings.locationUpdateIntervalSeconds ~/ 60).clamp(10, 30)}分',
           ),
           const SizedBox(height: 16),
           _buildSliderSetting(
             '検索半径（メートル）',
-            _settings.searchRadiusMeters.toDouble(),
-            50,
-            1000,
+            _settings.searchRadiusMeters.toDouble().clamp(100.0, 2000.0),
+            100,
+            2000,
             (value) {
               setState(() {
                 _settings = _settings.copyWith(
@@ -92,7 +98,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 );
               });
             },
-            '${_settings.searchRadiusMeters}m',
+            '${_settings.searchRadiusMeters.clamp(100, 2000)}m',
           ),
           const Divider(height: 32),
           _buildSectionTitle('案内設定'),
@@ -197,6 +203,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  /// Slider の divisions。0 以下にならないようにする（Flutter のアサーション対応）
+  int? _sliderDivisions(double min, double max) {
+    if (max <= min) return null;
+    final n = ((max - min) / 10).round();
+    return n > 0 ? n : 1;
+  }
+
   Widget _buildSliderSetting(
     String label,
     double value,
@@ -222,7 +235,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           value: value,
           min: min,
           max: max,
-          divisions: ((max - min) / 10).round(),
+          divisions: _sliderDivisions(min, max),
           label: valueLabel,
           onChanged: onChanged,
         ),

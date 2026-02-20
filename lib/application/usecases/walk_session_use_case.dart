@@ -43,11 +43,17 @@ class WalkSessionUseCase {
     // 設定を読み込み
     _currentSettings = await _settingsRepository.load();
 
-    // 権限チェック
-    final permission = await _locationService.getPermissionStatus();
+    // 権限チェック（未許可の場合は一度リクエストしてダイアログを表示）
+    var permission = await _locationService.getPermissionStatus();
     if (permission != LocationPermissionStatus.whileInUse &&
         permission != LocationPermissionStatus.always) {
-      throw Exception('位置情報の権限が必要です');
+      permission = await _locationService.requestPermission();
+      if (permission != LocationPermissionStatus.whileInUse &&
+          permission != LocationPermissionStatus.always) {
+        throw Exception(
+          '位置情報の権限が必要です。設定アプリから「Walk Walk」の位置情報を許可してください。',
+        );
+      }
     }
 
     _isRunning = true;

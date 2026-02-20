@@ -5,6 +5,7 @@ import '../../domain/models/app_settings.dart';
 class TtsService {
   FlutterTts? _flutterTts;
   bool _isInitialized = false;
+  bool _isSpeaking = false;
 
   /// TTSを初期化
   Future<void> initialize() async {
@@ -15,6 +16,11 @@ class TtsService {
     await _flutterTts!.setSpeechRate(0.5);
     await _flutterTts!.setVolume(1.0);
     await _flutterTts!.setPitch(1.0);
+
+    // コールバックを設定して読み上げ状態を追跡
+    _flutterTts!.setCompletionHandler(() {
+      _isSpeaking = false;
+    });
 
     _isInitialized = true;
   }
@@ -31,6 +37,7 @@ class TtsService {
 
     await _flutterTts!.setLanguage(settings.ttsLanguage);
     await _flutterTts!.setSpeechRate(settings.ttsSpeechRate);
+    _isSpeaking = true;
     await _flutterTts!.speak(text);
   }
 
@@ -38,12 +45,12 @@ class TtsService {
   Future<void> stop() async {
     if (_flutterTts != null) {
       await _flutterTts!.stop();
+      _isSpeaking = false;
     }
   }
 
   /// 読み上げ中かどうか
   Future<bool> isSpeaking() async {
-    if (_flutterTts == null) return false;
-    return await _flutterTts!.isSpeaking ?? false;
+    return _isSpeaking;
   }
 }

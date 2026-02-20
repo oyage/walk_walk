@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:drift/drift.dart';
-import '../../domain/models/guidance_message.dart';
+import '../../domain/models/guidance_message.dart' as domain;
 import '../../domain/models/geo_point.dart';
 import '../../domain/models/app_settings.dart';
-import 'database.dart';
+import 'database.dart' hide GuidanceMessage;
 
 /// 案内履歴の保存・読み込み
 class GuidanceHistoryRepository {
@@ -12,22 +12,22 @@ class GuidanceHistoryRepository {
   GuidanceHistoryRepository(this._db);
 
   /// 案内メッセージを保存
-  Future<void> addMessage(GuidanceMessage message) async {
+  Future<void> addMessage(domain.GuidanceMessage message) async {
     await _db.into(_db.guidanceMessages).insert(
           GuidanceMessagesCompanion.insert(
             id: message.id,
-            text: message.text,
+            messageText: message.text,
             createdAt: message.createdAt,
             lat: message.point.lat,
             lng: message.point.lng,
-            areaName: Value(message.areaName),
+            areaName: message.areaName ?? '',
             tagsJson: jsonEncode(message.tags),
           ),
         );
   }
 
   /// 最新N件の履歴を取得
-  Future<List<GuidanceMessage>> getRecentMessages({int limit = 20}) async {
+  Future<List<domain.GuidanceMessage>> getRecentMessages({int limit = 20}) async {
     final rows = await (_db.select(_db.guidanceMessages)
           ..orderBy([
             (tbl) => OrderingTerm(
@@ -47,12 +47,12 @@ class GuidanceHistoryRepository {
         // JSONパースエラー時は空リスト
       }
 
-      return GuidanceMessage(
+      return domain.GuidanceMessage(
         id: row.id,
-        text: row.text,
+        text: row.messageText,
         createdAt: row.createdAt,
         point: GeoPoint(lat: row.lat, lng: row.lng),
-        areaName: row.areaName,
+        areaName: row.areaName.isEmpty ? null : row.areaName,
         tags: tags,
       );
     }).toList();

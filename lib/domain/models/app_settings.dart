@@ -1,8 +1,8 @@
 /// アプリ設定
 class AppSettings {
   const AppSettings({
-    this.locationUpdateIntervalSeconds = 30,
-    this.searchRadiusMeters = 200,
+    this.locationUpdateIntervalSeconds = 900, // 15分
+    this.searchRadiusMeters = 500,
     this.cooldownSeconds = 30,
     this.distanceThresholdMeters = 50,
     this.historyRetentionHours = 168, // 7日間
@@ -11,8 +11,8 @@ class AppSettings {
     this.enableBackgroundMode = true,
   });
 
-  final int locationUpdateIntervalSeconds; // 位置情報取得間隔（10-300秒）
-  final int searchRadiusMeters; // 検索半径（50-1000メートル）
+  final int locationUpdateIntervalSeconds; // 位置情報取得間隔（10-30分＝600-1800秒）
+  final int searchRadiusMeters; // 検索半径（100-2000メートル）
   final int cooldownSeconds; // 案内クールダウン（10-120秒）
   final int distanceThresholdMeters; // 距離閾値（10-100メートル）
   final int historyRetentionHours; // 履歴保持期間（24-720時間）
@@ -59,8 +59,8 @@ class AppSettings {
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
         locationUpdateIntervalSeconds:
-            json['locationUpdateIntervalSeconds'] as int? ?? 30,
-        searchRadiusMeters: json['searchRadiusMeters'] as int? ?? 200,
+            json['locationUpdateIntervalSeconds'] as int? ?? 900,
+        searchRadiusMeters: json['searchRadiusMeters'] as int? ?? 500,
         cooldownSeconds: json['cooldownSeconds'] as int? ?? 30,
         distanceThresholdMeters:
             json['distanceThresholdMeters'] as int? ?? 50,

@@ -29,11 +29,12 @@ class PlacesCaches extends Table {
 /// 案内メッセージテーブル
 class GuidanceMessages extends Table {
   TextColumn get id => text()();
-  TextColumn get text => text()();
+  TextColumn get messageText => text()();
   DateTimeColumn get createdAt => dateTime()();
   RealColumn get lat => real()();
   RealColumn get lng => real()();
-  TextColumn get areaName => text().nullable()();
+  // 空文字で未設定を表現（読み取り時に null として扱う）
+  TextColumn get areaName => text()();
   TextColumn get tagsJson => text()(); // JSON配列文字列
 
   @override
