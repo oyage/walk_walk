@@ -1,0 +1,59 @@
+name: walk_walk
+description: お散歩音声ガイドアプリ - 現在地周辺の地域名・ランドマーク・店舗情報を音声で案内
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 位置情報
+  geolocator: ^10.1.0
+
+  # TTS
+  flutter_tts: ^4.0.0
+
+  # 通知
+  flutter_local_notifications: ^16.3.0
+
+  # 設定保存
+  shared_preferences: ^2.2.2
+
+  # ローカルDB
+  drift: ^2.14.0
+  sqlite3_flutter_libs: ^0.5.18
+  path_provider: ^2.1.1
+  path: ^1.8.3
+
+  # HTTP通信
+  http: ^1.1.0
+  dio: ^5.4.0
+
+  # 状態管理
+  flutter_riverpod: ^2.4.9
+
+  # ジオハッシュ
+  dart_geohash: ^2.1.0
+
+  # 環境変数
+  flutter_dotenv: ^5.1.0
+
+  # ログ
+  logger: ^2.0.2
+
+  # ユーティリティ
+  uuid: ^4.2.1
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  drift_dev: ^2.14.0
+  build_runner: ^2.4.7
+
+flutter:
+  uses-material-design: true
