@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/guidance_message.dart';
-import '../../infrastructure/storage/database.dart' hide GuidanceMessage;
+import '../../infrastructure/storage/database.dart';
 import '../../infrastructure/storage/guidance_history_repository.dart';
 import '../../infrastructure/storage/settings_repository.dart';
 import '../../infrastructure/location/location_service.dart';
