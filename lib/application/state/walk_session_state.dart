@@ -12,6 +12,7 @@ import '../../infrastructure/storage/cache_repository.dart';
 import '../../domain/services/guidance_throttle.dart';
 import '../usecases/walk_session_use_case.dart';
 import '../usecases/fetch_nearby_info_use_case.dart';
+import '../utils/network_error_util.dart';
 
 /// お散歩セッションの状態
 class WalkSessionState {
@@ -119,7 +120,10 @@ class WalkSessionNotifier extends StateNotifier<WalkSessionState> {
       await _useCase.start();
       state = state.copyWith(isRunning: true, error: null);
     } catch (e) {
-      state = state.copyWith(isRunning: false, error: e.toString());
+      state = state.copyWith(
+        isRunning: false,
+        error: userFacingErrorMessage(e),
+      );
     }
   }
 
@@ -129,7 +133,7 @@ class WalkSessionNotifier extends StateNotifier<WalkSessionState> {
       await _useCase.stop();
       state = state.copyWith(isRunning: false, error: null);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userFacingErrorMessage(e));
     }
   }
 
@@ -142,7 +146,7 @@ class WalkSessionNotifier extends StateNotifier<WalkSessionState> {
       // 最新の案内メッセージを取得して状態を更新
       // TODO: WalkSessionUseCaseから最新メッセージを取得する方法を追加
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userFacingErrorMessage(e));
     }
   }
 }

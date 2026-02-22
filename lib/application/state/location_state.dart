@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/location_sample.dart';
 import '../../infrastructure/location/location_service.dart';
+import '../utils/network_error_util.dart';
 
 /// 位置情報サービスのプロバイダ
 final locationServiceProvider = Provider<LocationService>((ref) {
@@ -53,10 +54,9 @@ class CurrentLocationNotifier extends StateNotifier<CurrentLocationState> {
       final location = await _locationService.getCurrentLocation();
       state = state.copyWith(location: location, isLoading: false);
     } catch (e) {
-      final message = e.toString().replaceFirst('Exception: ', '');
       state = state.copyWith(
         isLoading: false,
-        error: message,
+        error: userFacingErrorMessage(e),
       );
     }
   }
@@ -70,10 +70,7 @@ class CurrentLocationNotifier extends StateNotifier<CurrentLocationState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e is Exception
-            ? (e.toString().replaceFirst('Exception: ', ''))
-            : '位置情報の取得に失敗しました。'
-                'スマートフォンまたは実機でお試しください。',
+        error: userFacingErrorMessage(e),
       );
     }
   }

@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/models/app_settings.dart';
+import '../../infrastructure/location/location_service.dart';
 import '../../infrastructure/storage/settings_repository.dart';
 
 /// 設定画面
@@ -14,11 +17,20 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late AppSettings _settings;
   bool _isLoading = true;
+  final TextEditingController _testLatController = TextEditingController();
+  final TextEditingController _testLngController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    _testLatController.dispose();
+    _testLngController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -30,10 +42,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           settings.locationUpdateIntervalSeconds.clamp(600, 1800),
       searchRadiusMeters: settings.searchRadiusMeters.clamp(100, 2000),
     );
+    final prefs = await SharedPreferences.getInstance();
+    final testLat = prefs.getDouble(LocationService.testLocationLatKey);
+    final testLng = prefs.getDouble(LocationService.testLocationLngKey);
     setState(() {
       _settings = settings;
       _isLoading = false;
     });
+    _testLatController.text = testLat?.toString() ?? '';
+    _testLngController.text = testLng?.toString() ?? '';
   }
 
   Future<void> _saveSettings() async {
@@ -42,6 +59,57 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('設定を保存しました')),
+      );
+    }
+  }
+
+  Future<void> _applyTestLocation() async {
+    final lat = double.tryParse(_testLatController.text.trim());
+    final lng = double.tryParse(_testLngController.text.trim());
+    if (lat == null || lng == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('緯度・経度を正しい数値で入力してください')),
+        );
+      }
+      return;
+    }
+    if (lat < -90 || lat > 90) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('緯度は -90 〜 90 の範囲で入力してください')),
+        );
+      }
+      return;
+    }
+    if (lng < -180 || lng > 180) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('経度は -180 〜 180 の範囲で入力してください')),
+        );
+      }
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(LocationService.testLocationLatKey, lat);
+    await prefs.setDouble(LocationService.testLocationLngKey, lng);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('テスト位置を適用しました')),
+      );
+    }
+  }
+
+  Future<void> _clearTestLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(LocationService.testLocationLatKey);
+    await prefs.remove(LocationService.testLocationLngKey);
+    _testLatController.clear();
+    _testLngController.clear();
+    setState(() {});
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('テスト位置をクリアしました')),
       );
     }
   }
@@ -99,6 +167,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
             '${_settings.searchRadiusMeters.clamp(100, 2000)}m',
           ),
+          if (kDebugMode) ...[
+            const SizedBox(height: 16),
+            _buildSectionTitle('テスト用位置（DEV）'),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'DEV時のみ。指定するとこの座標が現在地として使われます。',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ),
+            TextFormField(
+              controller: _testLatController,
+              decoration: const InputDecoration(
+                labelText: '緯度',
+                hintText: '例: 35.6812',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _testLngController,
+              decoration: const InputDecoration(
+                labelText: '経度',
+                hintText: '例: 139.7671',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                FilledButton(
+                  onPressed: _applyTestLocation,
+                  child: const Text('適用'),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: _clearTestLocation,
+                  child: const Text('クリア'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
           const Divider(height: 32),
           _buildSectionTitle('案内設定'),
           _buildSliderSetting(

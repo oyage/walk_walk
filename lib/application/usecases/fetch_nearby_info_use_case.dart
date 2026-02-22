@@ -7,6 +7,7 @@ import '../../domain/services/geocoding_provider.dart';
 import '../../domain/services/places_provider.dart';
 import '../../infrastructure/storage/cache_repository.dart';
 import '../../infrastructure/logging/app_logger.dart';
+import '../utils/network_error_util.dart';
 
 /// 周辺情報取得ユースケース
 class FetchNearbyInfoUseCase {
@@ -43,8 +44,10 @@ class FetchNearbyInfoUseCase {
           );
         }
       } catch (e, stackTrace) {
-        // エラー時はキャッシュがあればそれを使用、なければnull
         AppLogger.w('逆ジオコーディングエラー', e, stackTrace);
+        if (isNetworkDnsError(e)) {
+          throw Exception(userFacingErrorMessage(e));
+        }
       }
     }
 
@@ -93,8 +96,10 @@ class FetchNearbyInfoUseCase {
         );
         AppLogger.d('POI検索結果をキャッシュに保存: ${pois.length}件');
       } catch (e, stackTrace) {
-        // エラー時は空リスト
         AppLogger.e('POI検索エラー', e, stackTrace);
+        if (isNetworkDnsError(e)) {
+          throw Exception(userFacingErrorMessage(e));
+        }
         pois = [];
       }
     }

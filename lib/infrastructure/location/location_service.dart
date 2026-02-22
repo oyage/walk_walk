@@ -1,6 +1,7 @@
 import 'package:app_settings/app_settings.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/models/location_sample.dart';
 import '../../domain/models/geo_point.dart';
 
@@ -14,8 +15,24 @@ enum LocationPermissionStatus {
 
 /// 位置情報サービス
 class LocationService {
-  /// 現在地を1回取得
+  /// テスト用位置の保存キー（DEV時のみ設定画面で使用）
+  static const String testLocationLatKey = 'walk_walk_test_lat';
+  static const String testLocationLngKey = 'walk_walk_test_lng';
+
+  /// 現在地を1回取得（テスト用位置が保存されていればそれを返す）
   Future<LocationSample> getCurrentLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lat = prefs.getDouble(testLocationLatKey);
+    final lng = prefs.getDouble(testLocationLngKey);
+    if (lat != null && lng != null) {
+      return LocationSample(
+        point: GeoPoint(lat: lat, lng: lng),
+        timestamp: DateTime.now(),
+        accuracy: null,
+        altitude: null,
+      );
+    }
+
     try {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
@@ -38,15 +55,31 @@ class LocationService {
     }
   }
 
-  /// 位置情報ストリーム（バックグラウンド用）
+  /// 位置情報ストリーム（バックグラウンド用）。テスト用位置が保存されていればそれを定期発火
   Stream<LocationSample> getLocationStream({
     int intervalSeconds = 30,
     LocationAccuracy accuracy = LocationAccuracy.high,
-  }) {
-    return Geolocator.getPositionStream(
+  }) async* {
+    final prefs = await SharedPreferences.getInstance();
+    final lat = prefs.getDouble(testLocationLatKey);
+    final lng = prefs.getDouble(testLocationLngKey);
+    if (lat != null && lng != null) {
+      yield* Stream.periodic(
+        Duration(seconds: intervalSeconds),
+        (_) => LocationSample(
+          point: GeoPoint(lat: lat, lng: lng),
+          timestamp: DateTime.now(),
+          accuracy: null,
+          altitude: null,
+        ),
+      );
+      return;
+    }
+
+    yield* Geolocator.getPositionStream(
       locationSettings: LocationSettings(
         accuracy: accuracy,
-        distanceFilter: 10, // 10メートル移動したら更新
+        distanceFilter: 10,
         timeLimit: Duration(seconds: intervalSeconds),
       ),
     ).map((position) => LocationSample(
