@@ -78,28 +78,24 @@ class FetchNearbyInfoUseCase {
 
     if (pois.isEmpty) {
       try {
-        // point_of_interest だけだと ZERO_RESULTS になりやすいため、
-        // establishment も併せて取得してマージする（建物を案内に含める）
-        final poiList = await _placesProvider.searchNearby(
-          point: point,
-          radiusMeters: searchRadiusMeters,
-          categories: ['point_of_interest'],
-        );
-        final establishmentList = await _placesProvider.searchNearby(
-          point: point,
-          radiusMeters: searchRadiusMeters,
-          categories: ['establishment'],
-        );
+        // Legacy Nearby Search の type には Table 1 のみ有効。
+        // point_of_interest/establishment は Table 2 のため無効になり ZERO_RESULTS になりやすい。
+        // Table 1 の store, restaurant, cafe, park で複数リクエストしてマージする。
+        const types = ['store', 'restaurant', 'cafe', 'park'];
         final seenIds = <String>{};
-        pois = [
-          ...poiList,
-          ...establishmentList.where((p) {
-            final id = p.sourceId ?? p.name;
-            if (seenIds.contains(id)) return false;
+        for (final t in types) {
+          final list = await _placesProvider.searchNearby(
+            point: point,
+            radiusMeters: searchRadiusMeters,
+            categories: [t],
+          );
+          for (final p in list) {
+            final id = p.sourceId ?? '${p.name}_$t';
+            if (seenIds.contains(id)) continue;
             seenIds.add(id);
-            return true;
-          }),
-        ];
+            pois.add(p);
+          }
+        }
         if (!skipCache) {
           final poisJson = jsonEncode(pois.map((p) => {
                 'name': p.name,
@@ -123,15 +119,16 @@ class FetchNearbyInfoUseCase {
       }
     }
 
-    // ランドマークと店舗に分類（establishment は建物として案内に含める）
+    // ランドマークと店舗に分類（store は建物・施設として案内に含める）
     final landmarks = pois.where((p) =>
       p.category == 'park' ||
       p.category == 'train_station' ||
       p.category == 'point_of_interest' ||
-      p.category == 'establishment'
+      p.category == 'establishment' ||
+      p.category == 'store'
     ).toList();
-    final shops = pois.where((p) => 
-      p.category == 'cafe' || 
+    final shops = pois.where((p) =>
+      p.category == 'cafe' ||
       p.category == 'restaurant' ||
       p.category == 'convenience_store'
     ).toList();
