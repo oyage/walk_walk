@@ -7,11 +7,17 @@ import '../../application/state/location_state.dart';
 import '../../application/state/walk_session_state.dart';
 import '../settings/settings_screen.dart';
 
-Future<void> _openMapUrl(String url) async {
+Future<void> _openMapUrl(String url, [BuildContext? context]) async {
   final uri = Uri.tryParse(url);
   if (uri == null) return;
-  if (await canLaunchUrl(uri)) {
+  try {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (e) {
+    if (context != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('地図アプリを開けませんでした')),
+      );
+    }
   }
 }
 
@@ -243,7 +249,7 @@ class HomeScreen extends ConsumerWidget {
                             return Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: InkWell(
-                                onTap: () => _openMapUrl(place.url),
+                                onTap: () => _openMapUrl(place.url, context),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
