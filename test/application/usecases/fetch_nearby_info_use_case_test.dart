@@ -41,6 +41,7 @@ void main() {
       when(() => mockPlaces.searchNearby(
             point: any(named: 'point'),
             radiusMeters: any(named: 'radiusMeters'),
+            categories: any(named: 'categories'),
           )).thenAnswer((_) async => [
         const PoiCandidate(
           name: '渋谷駅',
@@ -65,7 +66,8 @@ void main() {
       verify(() => mockPlaces.searchNearby(
             point: point,
             radiusMeters: searchRadiusMeters,
-          )).called(1);
+            categories: any(named: 'categories'),
+          )).called(4);
     });
 
     test('2回目はキャッシュから返しAPIは呼ばない', () async {
@@ -90,6 +92,7 @@ void main() {
       when(() => mockPlaces.searchNearby(
             point: any(named: 'point'),
             radiusMeters: any(named: 'radiusMeters'),
+            categories: any(named: 'categories'),
           )).thenAnswer((_) async => [
         const PoiCandidate(
           name: '皇居',
@@ -115,7 +118,8 @@ void main() {
       verify(() => mockPlaces.searchNearby(
             point: point,
             radiusMeters: searchRadiusMeters,
-          )).called(1);
+            categories: any(named: 'categories'),
+          )).called(4);
     });
 
     test('skipCache: true の場合はキャッシュを読まず常にAPIを呼ぶ', () async {
@@ -131,6 +135,7 @@ void main() {
       when(() => mockPlaces.searchNearby(
             point: any(named: 'point'),
             radiusMeters: any(named: 'radiusMeters'),
+            categories: any(named: 'categories'),
           )).thenAnswer((_) async => [
         const PoiCandidate(
           name: 'APIのPOI',
@@ -153,13 +158,14 @@ void main() {
       );
 
       expect(result.areaName, 'APIの地域名');
-      expect(result.shops.length, 1);
+      expect(result.shops.length, greaterThanOrEqualTo(3)); // 4 types で検索しマージするため3件以上
       expect(result.shops.first.name, 'APIのPOI');
       verify(() => mockGeocoding.reverseGeocode(point)).called(1);
       verify(() => mockPlaces.searchNearby(
             point: point,
             radiusMeters: searchRadiusMeters,
-          )).called(1);
+            categories: any(named: 'categories'),
+          )).called(4);
 
       when(() => mockGeocoding.reverseGeocode(any()))
           .thenAnswer((_) async => '別の地域');
@@ -182,6 +188,7 @@ void main() {
       when(() => mockPlaces.searchNearby(
             point: any(named: 'point'),
             radiusMeters: any(named: 'radiusMeters'),
+            categories: any(named: 'categories'),
           )).thenThrow(
         ClientException('Failed host lookup: \'maps.googleapis.com\''),
       );

@@ -2,9 +2,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../application/state/location_state.dart';
 import '../../application/state/walk_session_state.dart';
 import '../settings/settings_screen.dart';
+
+Future<void> _openMapUrl(String url) async {
+  final uri = Uri.tryParse(url);
+  if (uri == null) return;
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
 
 /// ホーム画面
 class HomeScreen extends ConsumerWidget {
@@ -210,7 +219,11 @@ class HomeScreen extends ConsumerWidget {
                               : Icons.store,
                         ),
                       ),
-                      title: Text(message.text),
+                      title: Text(
+                        message.mapUrls.isEmpty
+                            ? '案内した施設はありません'
+                            : '案内した施設の地図 (${message.mapUrls.length}件)',
+                      ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -221,6 +234,30 @@ class HomeScreen extends ConsumerWidget {
                                 .format(message.createdAt),
                             style: const TextStyle(fontSize: 12),
                           ),
+                          ...message.mapUrls.asMap().entries.map((e) {
+                            final i = e.key + 1;
+                            final url = e.value;
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: InkWell(
+                                onTap: () => _openMapUrl(url),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.map, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '地図を開く ($i)',
+                                      style: const TextStyle(
+                                        color: Colors.blue,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
                         ],
                       ),
                       isThreeLine: true,

@@ -11,12 +11,12 @@ class GuidanceHistoryRepository {
 
   GuidanceHistoryRepository(this._db);
 
-  /// 案内メッセージを保存
+  /// 案内メッセージを保存（mapUrls を JSON 配列で messageText に格納）
   Future<void> addMessage(domain.GuidanceMessage message) async {
     await _db.into(_db.guidanceMessages).insert(
           GuidanceMessagesCompanion.insert(
             id: message.id,
-            messageText: message.text,
+            messageText: jsonEncode(message.mapUrls),
             createdAt: message.createdAt,
             lat: message.point.lat,
             lng: message.point.lng,
@@ -47,9 +47,19 @@ class GuidanceHistoryRepository {
         // JSONパースエラー時は空リスト
       }
 
+      List<String> mapUrls = [];
+      try {
+        final decoded = jsonDecode(row.messageText);
+        if (decoded is List) {
+          mapUrls = decoded.map((e) => e.toString()).toList();
+        }
+      } catch (e) {
+        // 旧形式（案内文テキスト）やパースエラー時は空リスト
+      }
+
       return domain.GuidanceMessage(
         id: row.id,
-        text: row.messageText,
+        mapUrls: mapUrls,
         createdAt: row.createdAt,
         point: GeoPoint(lat: row.lat, lng: row.lng),
         areaName: row.areaName.isEmpty ? null : row.areaName,
