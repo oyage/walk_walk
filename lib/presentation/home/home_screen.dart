@@ -5,17 +5,36 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../application/state/location_state.dart';
 import '../../application/state/walk_session_state.dart';
+import '../../infrastructure/logging/app_logger.dart';
 import '../settings/settings_screen.dart';
 
 Future<void> _openMapUrl(String url, [BuildContext? context]) async {
   final uri = Uri.tryParse(url);
-  if (uri == null) return;
+  if (uri == null) {
+    if (kDebugMode) AppLogger.d('URLパース失敗: $url');
+    return;
+  }
+  if (kDebugMode) AppLogger.d('URLを開く試行: $url');
   try {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  } catch (e) {
+    bool launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (kDebugMode) AppLogger.d('launchUrl externalApplication: launched=$launched');
+    if (!launched) {
+      launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+      if (kDebugMode) AppLogger.d('launchUrl platformDefault: launched=$launched');
+    }
+    if (!launched && context != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('地図を開けませんでした')),
+      );
+    }
+  } catch (e, stackTrace) {
+    if (kDebugMode) AppLogger.e('URLを開けませんでした', e, stackTrace);
     if (context != null && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('地図アプリを開けませんでした')),
+        SnackBar(content: Text('地図を開けませんでした: $e')),
       );
     }
   }

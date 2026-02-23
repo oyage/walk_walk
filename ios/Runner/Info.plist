@@ -74,5 +74,10 @@
 	<array>
 		<string>location</string>
 	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>comgooglemaps</string>
+	</array>
 </dict>
 </plist>
