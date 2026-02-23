@@ -19,6 +19,14 @@ class LocationService {
   static const String testLocationLatKey = 'walk_walk_test_lat';
   static const String testLocationLngKey = 'walk_walk_test_lng';
 
+  /// テスト用位置が設定されているか（DEV時・設定画面やAPI検索の挙動判定に使用）
+  Future<bool> hasTestLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lat = prefs.getDouble(testLocationLatKey);
+    final lng = prefs.getDouble(testLocationLngKey);
+    return lat != null && lng != null;
+  }
+
   /// 現在地を1回取得（テスト用位置が保存されていればそれを返す）
   Future<LocationSample> getCurrentLocation() async {
     final prefs = await SharedPreferences.getInstance();

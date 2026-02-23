@@ -46,6 +46,9 @@ class GuidanceMessages extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  /// テスト用：メモリ上でDBを開く（外部から executor を渡す）
+  AppDatabase.forTesting(QueryExecutor e) : super(e);
+
   @override
   int get schemaVersion => 1;
 

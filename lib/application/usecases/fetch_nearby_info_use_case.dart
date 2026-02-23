@@ -21,22 +21,23 @@ class FetchNearbyInfoUseCase {
     this._cacheRepository,
   );
 
-  /// 周辺情報を取得（キャッシュ優先）
+  /// 周辺情報を取得（キャッシュ優先）。[skipCache] が true のときはキャッシュを使わず常にAPI検索を行う（テスト位置用）。
   Future<NearbyContext> fetchNearbyInfo(
     GeoPoint point,
-    int searchRadiusMeters,
-  ) async {
+    int searchRadiusMeters, {
+    bool skipCache = false,
+  }) async {
     // ジオハッシュでキャッシュキーを生成（経度、緯度の順序）
     final geoHasher = GeoHasher();
     final geohash = geoHasher.encode(point.lng, point.lat, precision: 8);
 
-    // 逆ジオコーディング（キャッシュチェック）
-    String? areaName = await _cacheRepository.getGeocodeCache(geohash);
+    // 逆ジオコーディング（skipCache でなければキャッシュ優先）
+    String? areaName =
+        skipCache ? null : await _cacheRepository.getGeocodeCache(geohash);
     if (areaName == null) {
       try {
         areaName = await _geocodingProvider.reverseGeocode(point);
-        if (areaName != null) {
-          // キャッシュに保存（TTL: 24時間）
+        if (areaName != null && !skipCache) {
           await _cacheRepository.setGeocodeCache(
             geohash,
             areaName,
@@ -51,14 +52,14 @@ class FetchNearbyInfoUseCase {
       }
     }
 
-    // POI検索（キャッシュチェック）
+    // POI検索（skipCache でなければキャッシュ優先）
     final cacheKey = '$geohash-$searchRadiusMeters';
-    String? cachedPoisJson = await _cacheRepository.getPlacesCache(cacheKey);
+    String? cachedPoisJson =
+        skipCache ? null : await _cacheRepository.getPlacesCache(cacheKey);
     List<PoiCandidate> pois = [];
 
     if (cachedPoisJson != null) {
       try {
-        // JSONからPoiCandidateリストに復元
         final List<dynamic> jsonList = jsonDecode(cachedPoisJson);
         pois = jsonList.map((json) {
           return PoiCandidate(
@@ -71,7 +72,6 @@ class FetchNearbyInfoUseCase {
         AppLogger.d('POIキャッシュから取得: ${pois.length}件');
       } catch (e, stackTrace) {
         AppLogger.w('POIキャッシュの復元に失敗', e, stackTrace);
-        // キャッシュが壊れている場合は再取得
         pois = [];
       }
     }
@@ -82,19 +82,20 @@ class FetchNearbyInfoUseCase {
           point: point,
           radiusMeters: searchRadiusMeters,
         );
-        // キャッシュに保存（TTL: 30分）
-        final poisJson = jsonEncode(pois.map((p) => {
-              'name': p.name,
-              'category': p.category,
-              'distanceMeters': p.distanceMeters,
-              'sourceId': p.sourceId,
-            }).toList());
-        await _cacheRepository.setPlacesCache(
-          cacheKey,
-          poisJson,
-          const Duration(minutes: 30),
-        );
-        AppLogger.d('POI検索結果をキャッシュに保存: ${pois.length}件');
+        if (!skipCache) {
+          final poisJson = jsonEncode(pois.map((p) => {
+                'name': p.name,
+                'category': p.category,
+                'distanceMeters': p.distanceMeters,
+                'sourceId': p.sourceId,
+              }).toList());
+          await _cacheRepository.setPlacesCache(
+            cacheKey,
+            poisJson,
+            const Duration(minutes: 30),
+          );
+          AppLogger.d('POI検索結果をキャッシュに保存: ${pois.length}件');
+        }
       } catch (e, stackTrace) {
         AppLogger.e('POI検索エラー', e, stackTrace);
         if (isNetworkDnsError(e)) {

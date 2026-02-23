@@ -87,10 +87,14 @@ class WalkSessionUseCase {
       // 位置取得
       final location = await _locationService.getCurrentLocation();
 
+      // テスト位置が設定されている場合はキャッシュをスキップし、設定した座標で実際にAPI検索を行う
+      final useTestApiSearch = await _locationService.hasTestLocation();
+
       // 周辺情報取得
       final context = await _fetchNearbyInfoUseCase.fetchNearbyInfo(
         location.point,
         _currentSettings!.searchRadiusMeters,
+        skipCache: useTestApiSearch,
       );
 
       // 抑制判定
