@@ -65,6 +65,9 @@ class WalkSessionUseCase {
       );
       await _backgroundWorker!.start(_currentSettings!);
     }
+
+    // 開始直後に1回案内を実行
+    performGuidance();
   }
 
   /// お散歩を停止

@@ -37,7 +37,7 @@ class BackgroundWorker {
     // 位置情報ストリームを開始
     _locationSubscription = _locationService
         .getLocationStream(
-          intervalSeconds: settings.locationUpdateIntervalSeconds,
+          intervalSeconds: settings.effectiveIntervalSeconds,
         )
         .listen(
           (location) {
@@ -52,9 +52,12 @@ class BackgroundWorker {
 
     // 定期的な案内タイマー（フォールバック）
     _guidanceTimer = Timer.periodic(
-      Duration(seconds: settings.locationUpdateIntervalSeconds),
+      Duration(seconds: settings.effectiveIntervalSeconds),
       (_) => _performGuidance(),
     );
+
+    // 開始直後に1回案内を実行
+    _performGuidance();
   }
 
   /// バックグラウンドワーカーを停止

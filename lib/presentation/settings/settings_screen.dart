@@ -37,11 +37,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _loadSettings() async {
     final repository = SettingsRepository();
     var settings = await repository.load();
-    // 位置情報取得間隔 10-30分、検索半径 100-2000m に正規化（旧設定の互換）
+    // 位置情報取得間隔 10-30分、検索半径 100-2000m、デバッグ間隔 5-60秒 に正規化（旧設定の互換）
     settings = settings.copyWith(
       locationUpdateIntervalSeconds:
           settings.locationUpdateIntervalSeconds.clamp(600, 1800),
       searchRadiusMeters: settings.searchRadiusMeters.clamp(100, 2000),
+      debugIntervalSeconds: settings.debugIntervalSeconds.clamp(5, 60),
     );
     final prefs = await SharedPreferences.getInstance();
     final testLat = prefs.getDouble(LocationService.testLocationLatKey);
@@ -229,6 +230,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            _buildSectionTitle('デバッグ用短縮間隔（DEV）'),
+            SwitchListTile(
+              title: const Text('デバッグ用短縮間隔を使用'),
+              subtitle: Text(
+                'ON: ${_settings.debugIntervalSeconds}秒間隔で位置取得・案内',
+                style: const TextStyle(fontSize: 12),
+              ),
+              value: _settings.useDebugInterval,
+              onChanged: (value) {
+                setState(() {
+                  _settings = _settings.copyWith(useDebugInterval: value);
+                });
+              },
+            ),
+            if (_settings.useDebugInterval) ...[
+              _buildSliderSetting(
+                '取得間隔（秒）',
+                _settings.debugIntervalSeconds.toDouble().clamp(5.0, 60.0),
+                5,
+                60,
+                (value) {
+                  setState(() {
+                    _settings = _settings.copyWith(
+                      debugIntervalSeconds: value.round(),
+                    );
+                  });
+                },
+                '${_settings.debugIntervalSeconds.clamp(5, 60)}秒',
+                divisions: 55,
+              ),
+            ],
+            const SizedBox(height: 16),
           ],
           const Divider(height: 32),
           _buildSectionTitle('案内設定'),
@@ -361,8 +394,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     double min,
     double max,
     ValueChanged<double> onChanged,
-    String valueLabel,
-  ) {
+    String valueLabel, {
+    int? divisions,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -380,7 +414,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           value: value,
           min: min,
           max: max,
-          divisions: _sliderDivisions(min, max),
+          divisions: divisions ?? _sliderDivisions(min, max),
           label: valueLabel,
           onChanged: onChanged,
         ),

@@ -9,6 +9,8 @@ class AppSettings {
     this.ttsSpeechRate = 0.5,
     this.ttsLanguage = 'ja',
     this.enableBackgroundMode = true,
+    this.useDebugInterval = false,
+    this.debugIntervalSeconds = 30,
   });
 
   final int locationUpdateIntervalSeconds; // 位置情報取得間隔（10-30分＝600-1800秒）
@@ -19,6 +21,14 @@ class AppSettings {
   final double ttsSpeechRate; // TTS速度（0.0-1.0）
   final String ttsLanguage; // 'ja', 'en', etc.
   final bool enableBackgroundMode; // バックグラウンド動作有効化
+  /// DEV用: 短い取得間隔を使うか
+  final bool useDebugInterval;
+  /// DEV用: 短縮間隔の秒数（5-60）
+  final int debugIntervalSeconds;
+
+  /// 実際に使う位置取得間隔（秒）。useDebugInterval が true なら debugIntervalSeconds、そうでなければ locationUpdateIntervalSeconds
+  int get effectiveIntervalSeconds =>
+      useDebugInterval ? debugIntervalSeconds : locationUpdateIntervalSeconds;
 
   AppSettings copyWith({
     int? locationUpdateIntervalSeconds,
@@ -29,6 +39,8 @@ class AppSettings {
     double? ttsSpeechRate,
     String? ttsLanguage,
     bool? enableBackgroundMode,
+    bool? useDebugInterval,
+    int? debugIntervalSeconds,
   }) {
     return AppSettings(
       locationUpdateIntervalSeconds:
@@ -43,6 +55,9 @@ class AppSettings {
       ttsLanguage: ttsLanguage ?? this.ttsLanguage,
       enableBackgroundMode:
           enableBackgroundMode ?? this.enableBackgroundMode,
+      useDebugInterval: useDebugInterval ?? this.useDebugInterval,
+      debugIntervalSeconds:
+          debugIntervalSeconds ?? this.debugIntervalSeconds,
     );
   }
 
@@ -55,6 +70,8 @@ class AppSettings {
         'ttsSpeechRate': ttsSpeechRate,
         'ttsLanguage': ttsLanguage,
         'enableBackgroundMode': enableBackgroundMode,
+        'useDebugInterval': useDebugInterval,
+        'debugIntervalSeconds': debugIntervalSeconds,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -69,6 +86,9 @@ class AppSettings {
         ttsLanguage: json['ttsLanguage'] as String? ?? 'ja',
         enableBackgroundMode:
             json['enableBackgroundMode'] as bool? ?? true,
+        useDebugInterval: json['useDebugInterval'] as bool? ?? false,
+        debugIntervalSeconds:
+            json['debugIntervalSeconds'] as int? ?? 30,
       );
 
   @override
