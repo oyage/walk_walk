@@ -117,11 +117,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _clearCache() async {
     final cache = ref.read(cacheRepositoryProvider);
+    final historyRepo = ref.read(guidanceHistoryRepositoryProvider);
     await cache.clearAllCache();
+    await historyRepo.deleteAllMessages();
+    ref.invalidate(guidanceHistoryProvider);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('キャッシュを削除しました。次回の案内でAPIが呼ばれます。')),
+          content: Text(
+            'キャッシュと案内履歴を削除しました。お散歩を停止してから再開するか、次回の案内でAPIが呼ばれます。',
+          ),
+        ),
       );
     }
   }
@@ -314,14 +320,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const Padding(
               padding: EdgeInsets.only(bottom: 8),
               child: Text(
-                'DEV: ジオ・POIキャッシュを削除すると、次回案内でAPIが呼ばれログが出ます。',
+                'DEV: ジオ・POIキャッシュと案内履歴を削除します。次回案内でAPIが呼ばれログが出ます。',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ),
             OutlinedButton.icon(
               onPressed: _clearCache,
               icon: const Icon(Icons.delete_outline),
-              label: const Text('キャッシュを削除'),
+              label: const Text('キャッシュ・案内履歴を削除'),
             ),
           ],
         ],

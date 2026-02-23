@@ -65,6 +65,11 @@ class GuidanceHistoryRepository {
         .go();
   }
 
+  /// 案内履歴をすべて削除（DEV・デバッグ用）
+  Future<void> deleteAllMessages() async {
+    await _db.delete(_db.guidanceMessages).go();
+  }
+
   /// 設定に基づいて古いデータを自動削除
   Future<int> cleanupOldMessages(AppSettings settings) async {
     final threshold = DateTime.now()
