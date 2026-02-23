@@ -254,3 +254,12 @@ flutter test --tags=integration
 7. **ビルドエラー**  
    - `dart run build_runner build --delete-conflicting-outputs` を実行していないと Drift の生成コードがなくて失敗します。  
    - Linux でリンカエラー（`ld.lld` 等）が出る場合は `lld` のインストール（`sudo apt install lld`）を試してください。
+
+8. **周辺案内が空（「特に目立った施設はありません」になる）ときの確認手順**  
+   - **ログの確認**: デバッグ実行時、コンソールに次のようなログが出ます。  
+     - `Places API GET ... type=store`（`type=restaurant` / `cafe` / `park` も同様）: 各 type でリクエストしているか。  
+     - `Places API response type=... results=N`: 各 type で何件返っているか。  
+     - `Places API error: type=... status=REQUEST_DENIED error_message=...`: API キー無効・制限・未有効化など。  
+   - **status の意味**: `OK` は成功、`ZERO_RESULTS` は該当なし（空で正常）、`REQUEST_DENIED` / `INVALID_REQUEST` / `OVER_QUERY_LIMIT` はエラーで例外が投げられます。エラー時はログの `error_message` を確認してください。  
+   - **キャッシュの影響**: 以前の検索結果がキャッシュされていると、同じ地点・半径では API が呼ばれず「POIキャッシュから取得」と出ます。設定画面（DEV 時のみ表示）の「キャッシュ・案内履歴を削除」でキャッシュを消してから、お散歩を停止して再開すると再検索されます。  
+   - **テスト位置**: 設定でテスト用位置（東京駅周辺など）を指定している場合、その座標で store / restaurant / cafe / park の 4 種を検索し、取得した POI を案内に使います。検索半径（例: 2000 m）を大きくするとヒットしやすくなります。

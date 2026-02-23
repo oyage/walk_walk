@@ -37,22 +37,33 @@ class GooglePlacesProvider implements PlacesProvider {
       }
       final response = await http.get(url);
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'OK') {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final status = data['status'] as String? ?? '';
+        final errorMessage = data['error_message'] as String? ?? '';
+
+        if (status == 'OK') {
           final results = data['results'] as List?;
           if (kDebugMode) {
             final count = results?.length ?? 0;
-            AppLogger.d('Places API response statusCode=${response.statusCode} results=$count');
+            AppLogger.d('Places API response type=$type statusCode=${response.statusCode} results=$count');
           }
           if (results != null) {
             return results.map((r) => _parsePlaceResult(r, point)).toList();
           }
-        } else if (data['status'] == 'ZERO_RESULTS') {
+          return [];
+        }
+        if (status == 'ZERO_RESULTS') {
           if (kDebugMode) {
-            AppLogger.d('Places API response statusCode=${response.statusCode} results=0');
+            AppLogger.d('Places API response type=$type statusCode=${response.statusCode} results=0');
           }
           return [];
         }
+
+        // REQUEST_DENIED / INVALID_REQUEST / OVER_QUERY_LIMIT 等はログ出力して例外
+        AppLogger.w('Places API error: type=$type status=$status error_message=$errorMessage');
+        throw Exception(
+          'Places API failed: status=$status${errorMessage.isNotEmpty ? ' message=$errorMessage' : ''}',
+        );
       }
       if (kDebugMode && response.statusCode != 200) {
         AppLogger.d('Places API response statusCode=${response.statusCode}');
@@ -60,7 +71,7 @@ class GooglePlacesProvider implements PlacesProvider {
       if (response.statusCode == 429) {
         throw Exception('API rate limit exceeded');
       }
-      return [];
+      throw Exception('Places API HTTP error: statusCode=${response.statusCode}');
     } catch (e) {
       if (e is Exception) {
         rethrow;

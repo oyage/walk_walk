@@ -52,8 +52,9 @@ class FetchNearbyInfoUseCase {
       }
     }
 
-    // POI検索（skipCache でなければキャッシュ優先）
-    final cacheKey = '$geohash-$searchRadiusMeters';
+    // POI検索（skipCache でなければキャッシュ優先）。v2: 分類ロジック変更で旧キャッシュを無効化
+    const _poiCacheKeyPrefix = 'v2';
+    final cacheKey = '$_poiCacheKeyPrefix-$geohash-$searchRadiusMeters';
     String? cachedPoisJson =
         skipCache ? null : await _cacheRepository.getPlacesCache(cacheKey);
     List<PoiCandidate> pois = [];
@@ -119,18 +120,16 @@ class FetchNearbyInfoUseCase {
       }
     }
 
-    // ランドマークと店舗に分類（store は建物・施設として案内に含める）
+    // 店舗: 飲食・コンビニのみ。それ以外はランドマーク扱い（建物・施設として案内に含める）
+    const shopCategories = {'cafe', 'restaurant', 'convenience_store'};
+    final shops = pois.where((p) => shopCategories.contains(p.category)).toList();
+    // ランドマーク: 明示カテゴリ + 未分類（gas_station, bank, pharmacy 等）はフォールバックで landmarks に含める
+    final landmarkCategories = {
+      'park', 'train_station', 'point_of_interest', 'establishment', 'store',
+      'museum', 'shopping_mall', 'supermarket', 'library', 'school', 'hospital',
+    };
     final landmarks = pois.where((p) =>
-      p.category == 'park' ||
-      p.category == 'train_station' ||
-      p.category == 'point_of_interest' ||
-      p.category == 'establishment' ||
-      p.category == 'store'
-    ).toList();
-    final shops = pois.where((p) =>
-      p.category == 'cafe' ||
-      p.category == 'restaurant' ||
-      p.category == 'convenience_store'
+      landmarkCategories.contains(p.category) || !shopCategories.contains(p.category),
     ).toList();
 
     return NearbyContext(
