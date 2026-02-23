@@ -165,6 +165,21 @@ presentation → application → domain
 flutter test
 ```
 
+通常のユニット・ウィジェットテスト（CI 想定）は上記のままです。統合テストを含めない場合は `flutter test --exclude-tags=integration` でも同じです。
+
+### 統合テスト（実 API）
+
+実 API（Google Geocoding API / Google Places API）を呼ぶ統合テストは、次のコマンドで実行します。
+
+```bash
+flutter test --tags=integration
+```
+
+- **実行前に** `.env` に `GOOGLE_PLACES_API_KEY`（および必要なら `GOOGLE_GEOCODING_API_KEY`）を設定してください。
+- キーが未設定または空の場合、統合テストは **スキップ** され、失敗にはなりません。CI で API キーを渡さなければ統合テストはスキップされ、既存の `flutter test` はそのまま利用できます。
+- 統合テストは SQLite のメモリ DB を使用するため、実行環境に **libsqlite3**（例: Linux では `libsqlite3-dev`）が入っている必要があります。入っていない場合は「Failed to load dynamic library 'libsqlite3.so'」などのエラーになります。
+- 実 API を叩くため、実行頻度が高いとクォータに触れる可能性があります。主にローカル確認用としてください。
+
 ### 方針
 
 - **設計書通りの UI・挙動**をテストで検証する（例: HomeScreen / SettingsScreen の表示・操作、FetchNearbyInfoUseCase のキャッシュ・API 呼び出し）。

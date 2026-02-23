@@ -1,10 +1,12 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../../domain/models/geo_point.dart';
 import '../../../domain/models/poi_candidate.dart';
 import '../../../domain/services/places_provider.dart';
+import '../../logging/app_logger.dart';
 
 /// Google Places API実装
 class GooglePlacesProvider implements PlacesProvider {
@@ -30,18 +32,32 @@ class GooglePlacesProvider implements PlacesProvider {
     );
 
     try {
+      if (kDebugMode) {
+        AppLogger.d('Places API GET ${_sanitizedUrl(url)}');
+      }
       final response = await http.get(url);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'OK') {
           final results = data['results'] as List?;
+          if (kDebugMode) {
+            final count = results?.length ?? 0;
+            AppLogger.d('Places API response statusCode=${response.statusCode} results=$count');
+          }
           if (results != null) {
             return results.map((r) => _parsePlaceResult(r, point)).toList();
           }
         } else if (data['status'] == 'ZERO_RESULTS') {
+          if (kDebugMode) {
+            AppLogger.d('Places API response statusCode=${response.statusCode} results=0');
+          }
           return [];
         }
-      } else if (response.statusCode == 429) {
+      }
+      if (kDebugMode && response.statusCode != 200) {
+        AppLogger.d('Places API response statusCode=${response.statusCode}');
+      }
+      if (response.statusCode == 429) {
         throw Exception('API rate limit exceeded');
       }
       return [];
@@ -108,4 +124,8 @@ class GooglePlacesProvider implements PlacesProvider {
   }
 
   double _toRadians(double degrees) => degrees * (3.141592653589793 / 180);
+
+  static String _sanitizedUrl(Uri u) {
+    return u.toString().replaceAll(RegExp(r'key=[^&]+'), 'key=***');
+  }
 }

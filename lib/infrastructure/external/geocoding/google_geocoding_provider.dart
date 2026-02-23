@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../../domain/models/geo_point.dart';
 import '../../../domain/services/geocoding_provider.dart';
+import '../../logging/app_logger.dart';
 
 /// Google Geocoding API実装
 class GoogleGeocodingProvider implements GeocodingProvider {
@@ -23,7 +25,16 @@ class GoogleGeocodingProvider implements GeocodingProvider {
     );
 
     try {
+      if (kDebugMode) {
+        AppLogger.d('Geocoding API GET ${_sanitizedUrl(url)}');
+      }
       final response = await http.get(url);
+      if (kDebugMode) {
+        final extra = response.statusCode == 200
+            ? _responseSummary(response)
+            : '';
+        AppLogger.d('Geocoding API response statusCode=${response.statusCode}$extra');
+      }
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'OK' && data['results'] != null) {
@@ -101,5 +112,20 @@ class GoogleGeocodingProvider implements GeocodingProvider {
     }
 
     return '不明な地域';
+  }
+
+  static String _sanitizedUrl(Uri u) {
+    return u.toString().replaceAll(RegExp(r'key=[^&]+'), 'key=***');
+  }
+
+  static String _responseSummary(http.Response response) {
+    try {
+      final data = json.decode(response.body);
+      if (data['status'] == 'OK' && data['results'] != null) {
+        final results = data['results'] as List;
+        return ' resultsCount=${results.length}';
+      }
+    } catch (_) {}
+    return '';
   }
 }
