@@ -20,6 +20,7 @@ class WalkSessionUseCase {
   final GuidanceFormatter _formatter;
   final GuidanceThrottle _throttle;
   final FetchNearbyInfoUseCase _fetchNearbyInfoUseCase;
+  final void Function()? onGuidanceRecorded;
   BackgroundWorker? _backgroundWorker;
 
   bool _isRunning = false;
@@ -32,8 +33,9 @@ class WalkSessionUseCase {
     this._ttsService,
     this._formatter,
     this._throttle,
-    this._fetchNearbyInfoUseCase,
-  );
+    this._fetchNearbyInfoUseCase, {
+    this.onGuidanceRecorded,
+  });
 
   /// お散歩を開始
   Future<void> start() async {
@@ -132,6 +134,7 @@ class WalkSessionUseCase {
         ],
       );
       await _historyRepository.addMessage(message);
+      onGuidanceRecorded?.call();
     } catch (e, stackTrace) {
       // エラーはログに記録
       AppLogger.e('案内実行中にエラーが発生しました', e, stackTrace);

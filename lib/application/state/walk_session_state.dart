@@ -100,6 +100,7 @@ final walkSessionUseCaseProvider = Provider<WalkSessionUseCase>((ref) {
     ref.read(guidanceFormatterProvider),
     ref.read(guidanceThrottleProvider),
     ref.read(fetchNearbyInfoUseCaseProvider),
+    onGuidanceRecorded: () => ref.invalidate(guidanceHistoryProvider),
   );
 });
 
