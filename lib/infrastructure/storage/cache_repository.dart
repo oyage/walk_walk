@@ -69,4 +69,10 @@ class CacheRepository {
           ..where((tbl) => tbl.expiresAt.isSmallerThanValue(now)))
         .go();
   }
+
+  /// ジオコーディング・POI の全キャッシュを削除（デバッグ・APIログ確認用）
+  Future<void> clearAllCache() async {
+    await _db.delete(_db.geocodeCaches).go();
+    await _db.delete(_db.placesCaches).go();
+  }
 }

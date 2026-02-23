@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/models/app_settings.dart';
 import '../../infrastructure/location/location_service.dart';
 import '../../infrastructure/storage/settings_repository.dart';
+import '../../application/state/walk_session_state.dart';
 
 /// 設定画面
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -110,6 +111,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('テスト位置をクリアしました')),
+      );
+    }
+  }
+
+  Future<void> _clearCache() async {
+    final cache = ref.read(cacheRepositoryProvider);
+    await cache.clearAllCache();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('キャッシュを削除しました。次回の案内でAPIが呼ばれます。')),
       );
     }
   }
@@ -297,6 +309,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               });
             },
           ),
+          if (kDebugMode) ...[
+            const SizedBox(height: 16),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'DEV: ジオ・POIキャッシュを削除すると、次回案内でAPIが呼ばれログが出ます。',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: _clearCache,
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('キャッシュを削除'),
+            ),
+          ],
         ],
       ),
     );
