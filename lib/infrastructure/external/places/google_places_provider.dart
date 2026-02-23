@@ -8,11 +8,13 @@ import '../../../domain/models/poi_candidate.dart';
 import '../../../domain/services/places_provider.dart';
 import '../../logging/app_logger.dart';
 
-/// Google Places API実装
+/// Google Places API (New) 実装 — searchNearby POST
 class GooglePlacesProvider implements PlacesProvider {
-  static const String _baseUrl = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
+  static const String _baseUrl = 'https://places.googleapis.com/v1/places:searchNearby';
 
   String? get _apiKey => dotenv.env['GOOGLE_PLACES_API_KEY'];
+
+  static const String _fieldMask = 'places.displayName,places.name,places.types,places.location';
 
   @override
   Future<List<PoiCandidate>> searchNearby({
@@ -24,54 +26,74 @@ class GooglePlacesProvider implements PlacesProvider {
       throw Exception('Google Places API key is not configured');
     }
 
-    // カテゴリをtypeパラメータに変換（簡易実装）
     final type = categories?.isNotEmpty == true ? categories!.first : 'point_of_interest';
 
-    final url = Uri.parse(
-      '$_baseUrl?location=${point.lat},${point.lng}&radius=$radiusMeters&type=$type&key=$_apiKey&language=ja',
-    );
+    final body = {
+      'includedTypes': [type],
+      'maxResultCount': 20,
+      'locationRestriction': {
+        'circle': {
+          'center': {
+            'latitude': point.lat,
+            'longitude': point.lng,
+          },
+          'radius': radiusMeters.toDouble(),
+        },
+      },
+      'languageCode': 'ja',
+    };
 
     try {
       if (kDebugMode) {
-        AppLogger.d('Places API GET ${_sanitizedUrl(url)}');
+        AppLogger.d('Places API (New) POST $_baseUrl type=$type');
       }
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
-        final status = data['status'] as String? ?? '';
-        final errorMessage = data['error_message'] as String? ?? '';
+      final response = await http.post(
+        Uri.parse(_baseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': _apiKey!,
+          'X-Goog-FieldMask': _fieldMask,
+        },
+        body: json.encode(body),
+      );
 
-        if (status == 'OK') {
-          final results = data['results'] as List?;
-          if (kDebugMode) {
-            final count = results?.length ?? 0;
-            AppLogger.d('Places API response type=$type statusCode=${response.statusCode} results=$count');
-          }
-          if (results != null) {
-            return results.map((r) => _parsePlaceResult(r, point)).toList();
-          }
-          return [];
+      if (response.statusCode != 200) {
+        if (kDebugMode) {
+          AppLogger.d('Places API (New) response statusCode=${response.statusCode}');
         }
-        if (status == 'ZERO_RESULTS') {
-          if (kDebugMode) {
-            AppLogger.d('Places API response type=$type statusCode=${response.statusCode} results=0');
-          }
-          return [];
+        if (response.statusCode == 429) {
+          throw Exception('API rate limit exceeded');
         }
+        throw Exception('Places API HTTP error: statusCode=${response.statusCode}');
+      }
 
-        // REQUEST_DENIED / INVALID_REQUEST / OVER_QUERY_LIMIT 等はログ出力して例外
-        AppLogger.w('Places API error: type=$type status=$status error_message=$errorMessage');
-        throw Exception(
-          'Places API failed: status=$status${errorMessage.isNotEmpty ? ' message=$errorMessage' : ''}',
-        );
+      final data = json.decode(response.body) as Map<String, dynamic>;
+
+      // New API は HTTP 200 でも JSON 内で error を返す場合がある
+      final error = data['error'];
+      if (error != null && error is Map<String, dynamic>) {
+        final message = error['message'] as String? ?? '';
+        final code = error['code'] as int?;
+        AppLogger.w('Places API (New) error: code=$code message=$message');
+        throw Exception('Places API failed: $message');
       }
-      if (kDebugMode && response.statusCode != 200) {
-        AppLogger.d('Places API response statusCode=${response.statusCode}');
+
+      final places = data['places'] as List?;
+      if (places == null) {
+        if (kDebugMode) {
+          AppLogger.d('Places API (New) response type=$type results=0');
+        }
+        return [];
       }
-      if (response.statusCode == 429) {
-        throw Exception('API rate limit exceeded');
+
+      if (kDebugMode) {
+        AppLogger.d('Places API (New) response type=$type statusCode=${response.statusCode} results=${places.length}');
       }
-      throw Exception('Places API HTTP error: statusCode=${response.statusCode}');
+
+      return places
+          .cast<Map<String, dynamic>>()
+          .map((p) => _parsePlaceResult(p, point))
+          .toList();
     } catch (e) {
       if (e is Exception) {
         rethrow;
@@ -80,39 +102,48 @@ class GooglePlacesProvider implements PlacesProvider {
     }
   }
 
-  PoiCandidate _parsePlaceResult(Map<String, dynamic> result, GeoPoint origin) {
-    final name = result['name'] as String? ?? '';
-    final types = result['types'] as List?;
+  PoiCandidate _parsePlaceResult(Map<String, dynamic> place, GeoPoint origin) {
+    String name = '';
+    final displayName = place['displayName'];
+    if (displayName is Map<String, dynamic>) {
+      name = displayName['text'] as String? ?? '';
+    }
+
+    final types = place['types'] as List?;
     final category = _extractCategory(types);
-    
-    // 距離計算（簡易版、実際はgeometry.locationから計算）
+
     int? distanceMeters;
-    if (result['geometry'] != null && result['geometry']['location'] != null) {
-      final loc = result['geometry']['location'];
-      final lat = loc['lat'] as double?;
-      final lng = loc['lng'] as double?;
+    final location = place['location'];
+    if (location is Map<String, dynamic>) {
+      final lat = location['latitude'] as num?;
+      final lng = location['longitude'] as num?;
       if (lat != null && lng != null) {
         distanceMeters = _calculateDistance(
           origin.lat,
           origin.lng,
-          lat,
-          lng,
+          lat.toDouble(),
+          lng.toDouble(),
         ).round();
       }
+    }
+
+    String? sourceId;
+    final resourceName = place['name'] as String?;
+    if (resourceName != null && resourceName.startsWith('places/')) {
+      sourceId = resourceName.substring(7);
     }
 
     return PoiCandidate(
       name: name,
       category: category,
       distanceMeters: distanceMeters,
-      sourceId: result['place_id'] as String?,
+      sourceId: sourceId,
     );
   }
 
   String _extractCategory(List? types) {
     if (types == null || types.isEmpty) return 'point_of_interest';
-    
-    // 優先順位: park > cafe > restaurant > station > ...
+
     final priority = ['park', 'cafe', 'restaurant', 'train_station', 'convenience_store'];
     for (final p in priority) {
       if (types.contains(p)) return p;
@@ -120,9 +151,8 @@ class GooglePlacesProvider implements PlacesProvider {
     return types.first as String;
   }
 
-  /// 2点間の距離を計算（Haversine formula）
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadius = 6371000; // meters
+    const double earthRadius = 6371000;
     final dLat = _toRadians(lat2 - lat1);
     final dLon = _toRadians(lon2 - lon1);
     final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
@@ -135,8 +165,4 @@ class GooglePlacesProvider implements PlacesProvider {
   }
 
   double _toRadians(double degrees) => degrees * (3.141592653589793 / 180);
-
-  static String _sanitizedUrl(Uri u) {
-    return u.toString().replaceAll(RegExp(r'key=[^&]+'), 'key=***');
-  }
 }

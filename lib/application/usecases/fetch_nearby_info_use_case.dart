@@ -52,8 +52,8 @@ class FetchNearbyInfoUseCase {
       }
     }
 
-    // POI検索（skipCache でなければキャッシュ優先）。v2: 分類ロジック変更で旧キャッシュを無効化
-    const _poiCacheKeyPrefix = 'v2';
+    // POI検索（skipCache でなければキャッシュ優先）。v3: Places API (New) searchNearby に移行
+    const _poiCacheKeyPrefix = 'v3';
     final cacheKey = '$_poiCacheKeyPrefix-$geohash-$searchRadiusMeters';
     String? cachedPoisJson =
         skipCache ? null : await _cacheRepository.getPlacesCache(cacheKey);
