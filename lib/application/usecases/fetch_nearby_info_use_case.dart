@@ -78,10 +78,28 @@ class FetchNearbyInfoUseCase {
 
     if (pois.isEmpty) {
       try {
-        pois = await _placesProvider.searchNearby(
+        // point_of_interest だけだと ZERO_RESULTS になりやすいため、
+        // establishment も併せて取得してマージする（建物を案内に含める）
+        final poiList = await _placesProvider.searchNearby(
           point: point,
           radiusMeters: searchRadiusMeters,
+          categories: ['point_of_interest'],
         );
+        final establishmentList = await _placesProvider.searchNearby(
+          point: point,
+          radiusMeters: searchRadiusMeters,
+          categories: ['establishment'],
+        );
+        final seenIds = <String>{};
+        pois = [
+          ...poiList,
+          ...establishmentList.where((p) {
+            final id = p.sourceId ?? p.name;
+            if (seenIds.contains(id)) return false;
+            seenIds.add(id);
+            return true;
+          }),
+        ];
         if (!skipCache) {
           final poisJson = jsonEncode(pois.map((p) => {
                 'name': p.name,
@@ -105,11 +123,12 @@ class FetchNearbyInfoUseCase {
       }
     }
 
-    // ランドマークと店舗に分類
-    final landmarks = pois.where((p) => 
-      p.category == 'park' || 
+    // ランドマークと店舗に分類（establishment は建物として案内に含める）
+    final landmarks = pois.where((p) =>
+      p.category == 'park' ||
       p.category == 'train_station' ||
-      p.category == 'point_of_interest'
+      p.category == 'point_of_interest' ||
+      p.category == 'establishment'
     ).toList();
     final shops = pois.where((p) => 
       p.category == 'cafe' || 

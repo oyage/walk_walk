@@ -72,4 +72,11 @@ class GuidanceThrottle {
   }
 
   double _toRadians(double degrees) => degrees * (3.141592653589793 / 180);
+
+  /// 抑制状態をリセット（キャッシュ削除時など、次回から再案内できるようにする）
+  void reset() {
+    _lastGuidanceAt = null;
+    _lastGuidancePoint = null;
+    _recentPoiNames.clear();
+  }
 }

@@ -121,6 +121,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final historyRepo = ref.read(guidanceHistoryRepositoryProvider);
     await cache.clearAllCache();
     await historyRepo.deleteAllMessages();
+    ref.read(guidanceThrottleProvider).reset();
     ref.invalidate(guidanceHistoryProvider);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
