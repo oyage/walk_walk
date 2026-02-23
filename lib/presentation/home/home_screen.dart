@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../application/state/location_state.dart';
 import '../../application/state/walk_session_state.dart';
@@ -25,16 +26,28 @@ Future<void> _openMapUrl(String url, [BuildContext? context]) async {
       launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
       if (kDebugMode) AppLogger.d('launchUrl platformDefault: launched=$launched');
     }
-    if (!launched && context != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('地図を開けませんでした')),
-      );
+    if (!launched) {
+      await _fallbackShareUrl(url, context);
     }
   } catch (e, stackTrace) {
     if (kDebugMode) AppLogger.e('URLを開けませんでした', e, stackTrace);
+    await _fallbackShareUrl(url, context);
+  }
+}
+
+/// url_launcher が失敗したとき（チャネルエラー等）のフォールバック: 共有でURLを渡す
+Future<void> _fallbackShareUrl(String url, BuildContext? context) async {
+  try {
+    await Share.share(url);
     if (context != null && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('地図を開けませんでした: $e')),
+        const SnackBar(content: Text('共有からブラウザなどで開いてください')),
+      );
+    }
+  } catch (e) {
+    if (context != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('地図を開けませんでした。アプリを再起動してみてください')),
       );
     }
   }
