@@ -220,9 +220,9 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ),
                       title: Text(
-                        message.mapUrls.isEmpty
+                        message.guidedPlaces.isEmpty
                             ? '案内した施設はありません'
-                            : '案内した施設の地図 (${message.mapUrls.length}件)',
+                            : '案内した施設 (${message.guidedPlaces.length}件)',
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,20 +234,23 @@ class HomeScreen extends ConsumerWidget {
                                 .format(message.createdAt),
                             style: const TextStyle(fontSize: 12),
                           ),
-                          ...message.mapUrls.asMap().entries.map((e) {
+                          ...message.guidedPlaces.asMap().entries.map((e) {
                             final i = e.key + 1;
-                            final url = e.value;
+                            final place = e.value;
+                            final label = place.name.isEmpty
+                                ? '地図を開く ($i)'
+                                : place.name;
                             return Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: InkWell(
-                                onTap: () => _openMapUrl(url),
+                                onTap: () => _openMapUrl(place.url),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(Icons.map, size: 16),
                                     const SizedBox(width: 4),
                                     Text(
-                                      '地図を開く ($i)',
+                                      label,
                                       style: const TextStyle(
                                         color: Colors.blue,
                                         decoration: TextDecoration.underline,

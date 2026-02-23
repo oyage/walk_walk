@@ -11,12 +11,15 @@ class GuidanceHistoryRepository {
 
   GuidanceHistoryRepository(this._db);
 
-  /// 案内メッセージを保存（mapUrls を JSON 配列で messageText に格納）
+  /// 案内メッセージを保存（guidedPlaces を JSON 配列 [{"name","url"}] で messageText に格納）
   Future<void> addMessage(domain.GuidanceMessage message) async {
+    final payload = message.guidedPlaces
+        .map((p) => <String, String>{'name': p.name, 'url': p.url})
+        .toList();
     await _db.into(_db.guidanceMessages).insert(
           GuidanceMessagesCompanion.insert(
             id: message.id,
-            messageText: jsonEncode(message.mapUrls),
+            messageText: jsonEncode(payload),
             createdAt: message.createdAt,
             lat: message.point.lat,
             lng: message.point.lng,
@@ -47,11 +50,21 @@ class GuidanceHistoryRepository {
         // JSONパースエラー時は空リスト
       }
 
-      List<String> mapUrls = [];
+      List<domain.GuidedPlace> guidedPlaces = [];
       try {
         final decoded = jsonDecode(row.messageText);
         if (decoded is List) {
-          mapUrls = decoded.map((e) => e.toString()).toList();
+          for (final e in decoded) {
+            if (e is Map<String, dynamic>) {
+              guidedPlaces.add(domain.GuidedPlace(
+                name: (e['name'] as String?) ?? '',
+                url: (e['url'] as String?) ?? '',
+              ));
+            } else if (e is String) {
+              // 旧形式: URL のみの配列
+              guidedPlaces.add(domain.GuidedPlace(name: '', url: e));
+            }
+          }
         }
       } catch (e) {
         // 旧形式（案内文テキスト）やパースエラー時は空リスト
@@ -59,7 +72,7 @@ class GuidanceHistoryRepository {
 
       return domain.GuidanceMessage(
         id: row.id,
-        mapUrls: mapUrls,
+        guidedPlaces: guidedPlaces,
         createdAt: row.createdAt,
         point: GeoPoint(lat: row.lat, lng: row.lng),
         areaName: row.areaName.isEmpty ? null : row.areaName,

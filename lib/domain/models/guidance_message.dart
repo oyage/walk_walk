@@ -1,10 +1,17 @@
 import 'geo_point.dart';
 
-/// 案内メッセージ（案内した建物のマップURLリストを保持）
+/// 案内した施設（名前と地図URL）
+class GuidedPlace {
+  const GuidedPlace({required this.name, required this.url});
+  final String name;
+  final String url;
+}
+
+/// 案内メッセージ（案内した建物の名前・マップURLリストを保持）
 class GuidanceMessage {
   const GuidanceMessage({
     required this.id,
-    required this.mapUrls,
+    required this.guidedPlaces,
     required this.createdAt,
     required this.point,
     this.areaName,
@@ -12,8 +19,8 @@ class GuidanceMessage {
   });
 
   final String id;
-  /// 案内した建物の Google マップ URL リスト（place_id ベース）
-  final List<String> mapUrls;
+  /// 案内した施設の名前と Google マップ URL のリスト
+  final List<GuidedPlace> guidedPlaces;
   final DateTime createdAt;
   final GeoPoint point;
   final String? areaName;
@@ -21,5 +28,5 @@ class GuidanceMessage {
 
   @override
   String toString() =>
-      'GuidanceMessage(id: $id, mapUrls: ${mapUrls.length}件, createdAt: $createdAt, tags: $tags)';
+      'GuidanceMessage(id: $id, guidedPlaces: ${guidedPlaces.length}件, createdAt: $createdAt, tags: $tags)';
 }

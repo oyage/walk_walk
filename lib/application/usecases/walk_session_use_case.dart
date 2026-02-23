@@ -121,21 +121,24 @@ class WalkSessionUseCase {
       // 読み上げ
       await _ttsService.speak(text, _currentSettings!);
 
-      // 案内した建物のマップURLリスト（案内で使った POI の place_id から生成）
+      // 案内した施設の名前とマップURL（案内で使った POI から生成）
       final pois = [
         ...context.landmarks.take(3),
         ...context.shops.take(3),
       ];
-      final mapUrls = [
+      final guidedPlaces = [
         for (final p in pois)
           if (p.sourceId != null && p.sourceId!.isNotEmpty)
-            'https://www.google.com/maps/place/?q=place_id:${p.sourceId}',
+            GuidedPlace(
+              name: p.name,
+              url: 'https://www.google.com/maps/place/?q=place_id:${p.sourceId}',
+            ),
       ];
 
-      // 履歴保存（案内文ではなくマップURLリストを残す）
+      // 履歴保存（施設名・マップURLリストを残す）
       final message = GuidanceMessage(
         id: const Uuid().v4(),
-        mapUrls: mapUrls,
+        guidedPlaces: guidedPlaces,
         createdAt: DateTime.now(),
         point: location.point,
         areaName: context.areaName,
