@@ -23,7 +23,7 @@ class NotificationService {
     );
 
     await _notifications.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
@@ -71,12 +71,17 @@ class NotificationService {
       linux: linuxDetails,
     );
 
-    await _notifications.show(id, title, body, details);
+    await _notifications.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: details,
+    );
   }
 
   /// 通知をキャンセル
   static Future<void> cancelNotification(int id) async {
-    await _notifications.cancel(id);
+    await _notifications.cancel(id: id);
   }
 
   /// すべての通知をキャンセル
