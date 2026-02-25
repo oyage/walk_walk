@@ -11,6 +11,7 @@ class AppSettings {
     this.enableBackgroundMode = true,
     this.useDebugInterval = false,
     this.debugIntervalSeconds = 30,
+    this.useEmbeddedTts = false,
   });
 
   final int locationUpdateIntervalSeconds; // 位置情報取得間隔（10-30分＝600-1800秒）
@@ -25,6 +26,8 @@ class AppSettings {
   final bool useDebugInterval;
   /// DEV用: 短縮間隔の秒数（5-60）
   final int debugIntervalSeconds;
+  /// アプリ内組み込みTTSを使用するか（現在はAndroidなど対応プラットフォームのみ有効）
+  final bool useEmbeddedTts;
 
   /// 実際に使う位置取得間隔（秒）。useDebugInterval が true なら debugIntervalSeconds、そうでなければ locationUpdateIntervalSeconds
   int get effectiveIntervalSeconds =>
@@ -41,6 +44,7 @@ class AppSettings {
     bool? enableBackgroundMode,
     bool? useDebugInterval,
     int? debugIntervalSeconds,
+    bool? useEmbeddedTts,
   }) {
     return AppSettings(
       locationUpdateIntervalSeconds:
@@ -58,6 +62,7 @@ class AppSettings {
       useDebugInterval: useDebugInterval ?? this.useDebugInterval,
       debugIntervalSeconds:
           debugIntervalSeconds ?? this.debugIntervalSeconds,
+      useEmbeddedTts: useEmbeddedTts ?? this.useEmbeddedTts,
     );
   }
 
@@ -72,6 +77,7 @@ class AppSettings {
         'enableBackgroundMode': enableBackgroundMode,
         'useDebugInterval': useDebugInterval,
         'debugIntervalSeconds': debugIntervalSeconds,
+        'useEmbeddedTts': useEmbeddedTts,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -89,6 +95,7 @@ class AppSettings {
         useDebugInterval: json['useDebugInterval'] as bool? ?? false,
         debugIntervalSeconds:
             json['debugIntervalSeconds'] as int? ?? 30,
+        useEmbeddedTts: json['useEmbeddedTts'] as bool? ?? false,
       );
 
   @override

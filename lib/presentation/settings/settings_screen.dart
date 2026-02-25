@@ -322,6 +322,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               });
             },
           ),
+          const SizedBox(height: 16),
+          if (defaultTargetPlatform == TargetPlatform.android)
+            SwitchListTile(
+              title: const Text('アプリ内合成音声を使用（ベータ）'),
+              subtitle: const Text(
+                'OSのTTSではなく、アプリに組み込んだ合成音声エンジンで再生します（現在はAndroidのみ対応）。',
+                style: TextStyle(fontSize: 12),
+              ),
+              value: _settings.useEmbeddedTts,
+              onChanged: (value) {
+                setState(() {
+                  _settings = _settings.copyWith(useEmbeddedTts: value);
+                });
+              },
+            ),
           const Divider(height: 32),
           _buildSectionTitle('その他'),
           _buildSliderSetting(
