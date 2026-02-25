@@ -7,7 +7,7 @@ plugins {
 
 dependencies {
     // Java 8+ API desugaring（flutter_local_notifications が要求）
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 android {
