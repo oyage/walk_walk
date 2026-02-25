@@ -20,7 +20,7 @@ dependencies:
   audioplayers: ^6.4.0
 
   # 通知
-  flutter_local_notifications: ^16.3.0
+  flutter_local_notifications: ^20.1.0
 
   # 設定保存
   shared_preferences: ^2.2.2
