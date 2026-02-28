@@ -1,12 +1,13 @@
 import 'package:uuid/uuid.dart';
 import '../../domain/models/guidance_message.dart';
 import '../../domain/models/app_settings.dart';
+import '../../domain/models/nearby_context.dart';
+import '../../domain/models/poi_candidate.dart';
 import '../../infrastructure/location/location_service.dart';
 import '../../infrastructure/storage/settings_repository.dart';
 import '../../infrastructure/storage/guidance_history_repository.dart';
 import '../../infrastructure/tts/tts_service.dart';
 import '../../domain/services/guidance_formatter.dart';
-import '../../domain/services/guidance_throttle.dart';
 import '../../infrastructure/background/background_worker.dart';
 import '../../infrastructure/logging/app_logger.dart';
 import 'fetch_nearby_info_use_case.dart';
@@ -18,7 +19,6 @@ class WalkSessionUseCase {
   final GuidanceHistoryRepository _historyRepository;
   final TtsService _ttsService;
   final GuidanceFormatter _formatter;
-  final GuidanceThrottle _throttle;
   final FetchNearbyInfoUseCase _fetchNearbyInfoUseCase;
   final void Function()? onGuidanceRecorded;
   BackgroundWorker? _backgroundWorker;
@@ -32,7 +32,6 @@ class WalkSessionUseCase {
     this._historyRepository,
     this._ttsService,
     this._formatter,
-    this._throttle,
     this._fetchNearbyInfoUseCase, {
     this.onGuidanceRecorded,
   });
@@ -102,30 +101,43 @@ class WalkSessionUseCase {
         skipCache: useTestApiSearch,
       );
 
-      // 抑制判定
-      final poiNames = [
-        ...context.landmarks.map((l) => l.name),
-        ...context.shops.map((s) => s.name),
-      ];
-      if (!_throttle.shouldSpeak(
-        location.point,
-        _currentSettings!,
-        poiNames,
-      )) {
-        return; // 案内をスキップ
+      // 履歴から直近で案内した施設名を取得（同一施設は別のを優先するため）
+      final recentMessages =
+          await _historyRepository.getRecentMessages(limit: 20);
+      final recentNames = <String>{};
+      for (final msg in recentMessages) {
+        for (final p in msg.guidedPlaces) {
+          final n = p.name.trim().toLowerCase();
+          if (n.isNotEmpty) recentNames.add(n);
+        }
       }
 
+      // 履歴にない施設を優先して最大3件ずつ選ぶ。同一のみの場合はそのまま案内
+      const int maxPerCategory = 3;
+      final selectedLandmarks = _selectPrioritizingNotInHistory(
+        context.landmarks,
+        recentNames,
+        maxPerCategory,
+      );
+      final selectedShops = _selectPrioritizingNotInHistory(
+        context.shops,
+        recentNames,
+        maxPerCategory,
+      );
+      final filteredContext = NearbyContext(
+        areaName: context.areaName,
+        landmarks: selectedLandmarks,
+        shops: selectedShops,
+      );
+
       // 文章生成
-      final text = _formatter.format(context, _currentSettings!);
+      final text = _formatter.format(filteredContext, _currentSettings!);
 
       // 読み上げ
       await _ttsService.speak(text, _currentSettings!);
 
-      // 案内した施設の名前とマップURL（案内で使った POI から生成）
-      final pois = [
-        ...context.landmarks.take(3),
-        ...context.shops.take(3),
-      ];
+      // 案内した施設の名前とマップURL（選定した POI から生成）
+      final pois = [...selectedLandmarks, ...selectedShops];
       final guidedPlaces = [
         for (final p in pois)
           if (p.sourceId != null && p.sourceId!.isNotEmpty)
@@ -141,10 +153,10 @@ class WalkSessionUseCase {
         guidedPlaces: guidedPlaces,
         createdAt: DateTime.now(),
         point: location.point,
-        areaName: context.areaName,
+        areaName: filteredContext.areaName,
         tags: [
-          if (context.hasLandmarks) 'landmark',
-          if (context.hasShops) 'shop',
+          if (filteredContext.hasLandmarks) 'landmark',
+          if (filteredContext.hasShops) 'shop',
         ],
       );
       await _historyRepository.addMessage(message);
@@ -157,4 +169,25 @@ class WalkSessionUseCase {
   }
 
   bool get isRunning => _isRunning;
+
+  /// 履歴にない施設を優先して最大 [maxCount] 件を選ぶ。同一のみの場合はそのまま返す。
+  static List<PoiCandidate> _selectPrioritizingNotInHistory(
+    List<PoiCandidate> candidates,
+    Set<String> recentNames,
+    int maxCount,
+  ) {
+    final notInHistory = <PoiCandidate>[];
+    final inHistory = <PoiCandidate>[];
+    for (final p in candidates) {
+      final key = p.name.trim().toLowerCase();
+      if (key.isEmpty || recentNames.contains(key)) {
+        inHistory.add(p);
+      } else {
+        notInHistory.add(p);
+      }
+    }
+    return [...notInHistory.take(maxCount), ...inHistory]
+        .take(maxCount)
+        .toList();
+  }
 }

@@ -9,7 +9,6 @@ import '../../infrastructure/external/geocoding/google_geocoding_provider.dart';
 import '../../infrastructure/external/places/google_places_provider.dart';
 import '../../infrastructure/formatters/guidance_formatter_impl.dart';
 import '../../infrastructure/storage/cache_repository.dart';
-import '../../domain/services/guidance_throttle.dart';
 import '../usecases/walk_session_use_case.dart';
 import '../usecases/fetch_nearby_info_use_case.dart';
 import '../utils/network_error_util.dart';
@@ -78,10 +77,6 @@ final guidanceFormatterProvider = Provider<GuidanceFormatterImpl>((ref) {
   return GuidanceFormatterImpl();
 });
 
-final guidanceThrottleProvider = Provider<GuidanceThrottle>((ref) {
-  return GuidanceThrottle();
-});
-
 final fetchNearbyInfoUseCaseProvider =
     Provider<FetchNearbyInfoUseCase>((ref) {
   return FetchNearbyInfoUseCase(
@@ -98,7 +93,6 @@ final walkSessionUseCaseProvider = Provider<WalkSessionUseCase>((ref) {
     ref.read(guidanceHistoryRepositoryProvider),
     ref.read(ttsServiceProvider),
     ref.read(guidanceFormatterProvider),
-    ref.read(guidanceThrottleProvider),
     ref.read(fetchNearbyInfoUseCaseProvider),
     onGuidanceRecorded: () => ref.invalidate(guidanceHistoryProvider),
   );

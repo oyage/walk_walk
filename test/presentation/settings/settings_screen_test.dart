@@ -66,24 +66,6 @@ void main() {
       );
     });
 
-    testWidgets('案内設定セクションが表示される', (tester) async {
-      await pumpSettings(tester);
-      await scrollToBottom(tester);
-      expect(find.text('案内設定'), findsOneWidget);
-    }, skip: true); // DEV時はListViewが長く案内設定がビューポート外になる環境あり
-
-    testWidgets('案内クールダウン（秒）が表示される', (tester) async {
-      await pumpSettings(tester);
-      await scrollToBottom(tester);
-      expect(find.text('案内クールダウン（秒）'), findsAtLeastNWidgets(1));
-    }, skip: true); // DEV時はListViewが長く案内クールダウンがビューポート外になる環境あり
-
-    testWidgets('距離閾値（メートル）が表示される', (tester) async {
-      await pumpSettings(tester);
-      await scrollToBottom(tester);
-      expect(find.text('距離閾値（メートル）'), findsOneWidget);
-    }, skip: true); // DEV時はListViewが長く距離閾値がビューポート外になる環境あり
-
     testWidgets('音声設定セクションが表示される', (tester) async {
       await pumpSettings(tester);
       await scrollToBottom(tester);

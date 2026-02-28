@@ -132,10 +132,12 @@ class FetchNearbyInfoUseCase {
       landmarkCategories.contains(p.category) || !shopCategories.contains(p.category),
     ).toList();
 
+    // 案内候補のプールサイズ（履歴にない施設を優先して選ぶため多めに返す）
+    const int candidatePoolSize = 10;
     return NearbyContext(
       areaName: areaName,
-      landmarks: landmarks.take(3).toList(),
-      shops: shops.take(3).toList(),
+      landmarks: landmarks.take(candidatePoolSize).toList(),
+      shops: shops.take(candidatePoolSize).toList(),
     );
   }
 }

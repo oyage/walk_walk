@@ -121,7 +121,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final historyRepo = ref.read(guidanceHistoryRepositoryProvider);
     await cache.clearAllCache();
     await historyRepo.deleteAllMessages();
-    ref.read(guidanceThrottleProvider).reset();
     ref.invalidate(guidanceHistoryProvider);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -269,39 +268,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
             const SizedBox(height: 16),
           ],
-          const Divider(height: 32),
-          _buildSectionTitle('案内設定'),
-          _buildSliderSetting(
-            '案内クールダウン（秒）',
-            _settings.cooldownSeconds.toDouble(),
-            10,
-            120,
-            (value) {
-              setState(() {
-                _settings = _settings.copyWith(
-                  cooldownSeconds: value.round(),
-                );
-              });
-            },
-            '${_settings.cooldownSeconds}秒',
-            helpText: '同じ施設を連続で案内しないための待ち時間。',
-          ),
-          const SizedBox(height: 16),
-          _buildSliderSetting(
-            '距離閾値（メートル）',
-            _settings.distanceThresholdMeters.toDouble(),
-            10,
-            100,
-            (value) {
-              setState(() {
-                _settings = _settings.copyWith(
-                  distanceThresholdMeters: value.round(),
-                );
-              });
-            },
-            '${_settings.distanceThresholdMeters}m',
-            helpText: '施設にこれ以上近づいたら案内する距離。',
-          ),
           const Divider(height: 32),
           _buildSectionTitle('音声設定'),
           _buildSliderSetting(

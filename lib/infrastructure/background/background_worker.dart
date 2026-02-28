@@ -6,11 +6,10 @@ import '../logging/app_logger.dart';
 import '../../application/usecases/walk_session_use_case.dart';
 
 /// バックグラウンドワーカー
-/// 位置情報を監視し、定期的に案内を実行
+/// 位置情報が更新されたタイミングでのみ案内を実行
 class BackgroundWorker {
   bool _isRunning = false;
   StreamSubscription<dynamic>? _locationSubscription;
-  Timer? _guidanceTimer;
   final LocationService _locationService;
   final WalkSessionUseCase _walkSessionUseCase;
   AppSettings? _currentSettings;
@@ -50,13 +49,7 @@ class BackgroundWorker {
           },
         );
 
-    // 定期的な案内タイマー（フォールバック）
-    _guidanceTimer = Timer.periodic(
-      Duration(seconds: settings.effectiveIntervalSeconds),
-      (_) => _performGuidance(),
-    );
-
-    // 開始直後に1回案内を実行
+    // 開始直後に1回案内を実行（位置取得後に案内）
     _performGuidance();
   }
 
@@ -67,8 +60,6 @@ class BackgroundWorker {
     _isRunning = false;
     await _locationSubscription?.cancel();
     _locationSubscription = null;
-    _guidanceTimer?.cancel();
-    _guidanceTimer = null;
 
     // 通知をキャンセル
     await NotificationService.cancelNotification(1);
