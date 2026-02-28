@@ -171,6 +171,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               });
             },
             '${(_settings.locationUpdateIntervalSeconds ~/ 60).clamp(10, 30)}分',
+            helpText:
+                '現在地を何分ごとに更新するか。短いほど正確だが電池消費が増えます。',
           ),
           const SizedBox(height: 16),
           _buildSliderSetting(
@@ -186,6 +188,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               });
             },
             '${_settings.searchRadiusMeters.clamp(100, 2000)}m',
+            helpText: '周辺の施設を検索する半径。大きいほど候補が増えます。',
           ),
           if (kDebugMode) ...[
             const SizedBox(height: 16),
@@ -260,6 +263,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
                 '${_settings.debugIntervalSeconds.clamp(5, 60)}秒',
                 divisions: 55,
+                helpText:
+                    'DEV時のみ。短い間隔で位置取得・案内を行います。',
               ),
             ],
             const SizedBox(height: 16),
@@ -279,6 +284,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               });
             },
             '${_settings.cooldownSeconds}秒',
+            helpText: '同じ施設を連続で案内しないための待ち時間。',
           ),
           const SizedBox(height: 16),
           _buildSliderSetting(
@@ -294,6 +300,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               });
             },
             '${_settings.distanceThresholdMeters}m',
+            helpText: '施設にこれ以上近づいたら案内する距離。',
           ),
           const Divider(height: 32),
           _buildSectionTitle('音声設定'),
@@ -310,6 +317,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               });
             },
             _settings.ttsSpeechRate.toStringAsFixed(2),
+            helpText: '読み上げの速さ。0が遅く、1が速い。',
           ),
           const SizedBox(height: 16),
           _buildDropdownSetting(
@@ -321,6 +329,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 _settings = _settings.copyWith(ttsLanguage: value!);
               });
             },
+            helpText: '読み上げに使う言語（ja=日本語、en=英語）。',
           ),
           const SizedBox(height: 16),
           if (defaultTargetPlatform == TargetPlatform.android)
@@ -352,6 +361,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               });
             },
             '${_settings.historyRetentionHours}時間',
+            helpText: '案内履歴を何時間保持するか。過ぎた分は自動削除されます。',
           ),
           const SizedBox(height: 16),
           SwitchListTile(
@@ -384,6 +394,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  static const TextStyle _helpTextStyle =
+      TextStyle(fontSize: 12, color: Colors.grey);
+
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -412,6 +425,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ValueChanged<double> onChanged,
     String valueLabel, {
     int? divisions,
+    String? helpText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,6 +440,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ],
         ),
+        if (helpText != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 4),
+            child: Text(helpText, style: _helpTextStyle),
+          ),
         Slider(
           value: value,
           min: min,
@@ -442,21 +461,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     String label,
     T value,
     List<T> items,
-    ValueChanged<T?> onChanged,
-  ) {
-    return DropdownButtonFormField<T>(
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
-      value: value,
-      items: items.map((item) {
-        return DropdownMenuItem<T>(
-          value: item,
-          child: Text(item.toString().toUpperCase()),
-        );
-      }).toList(),
-      onChanged: onChanged,
+    ValueChanged<T?> onChanged, {
+    String? helpText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (helpText != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(helpText, style: _helpTextStyle),
+          ),
+        DropdownButtonFormField<T>(
+          decoration: InputDecoration(
+            labelText: label,
+            border: const OutlineInputBorder(),
+          ),
+          value: value,
+          items: items.map((item) {
+            return DropdownMenuItem<T>(
+              value: item,
+              child: Text(item.toString().toUpperCase()),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }
