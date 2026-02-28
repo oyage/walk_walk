@@ -24,6 +24,7 @@ class WalkSessionUseCase {
   BackgroundWorker? _backgroundWorker;
 
   bool _isRunning = false;
+  bool _isPerformingGuidance = false;
   AppSettings? _currentSettings;
 
   WalkSessionUseCase(
@@ -65,10 +66,11 @@ class WalkSessionUseCase {
         this,
       );
       await _backgroundWorker!.start(_currentSettings!);
+      // 初回案内は BackgroundWorker.start() 内の _performGuidance() で実行済みのためここでは呼ばない
+    } else {
+      // 前景のみのときは開始直後に1回案内を実行
+      performGuidance();
     }
-
-    // 開始直後に1回案内を実行
-    performGuidance();
   }
 
   /// お散歩を停止
@@ -86,7 +88,9 @@ class WalkSessionUseCase {
   /// 1回の案内を実行（前景用）
   Future<void> performGuidance() async {
     if (!_isRunning || _currentSettings == null) return;
+    if (_isPerformingGuidance) return;
 
+    _isPerformingGuidance = true;
     try {
       // 位置取得
       final location = await _locationService.getCurrentLocation();
@@ -165,6 +169,8 @@ class WalkSessionUseCase {
       // エラーはログに記録
       AppLogger.e('案内実行中にエラーが発生しました', e, stackTrace);
       rethrow; // 呼び出し元でエラーを処理できるように再スロー
+    } finally {
+      _isPerformingGuidance = false;
     }
   }
 
