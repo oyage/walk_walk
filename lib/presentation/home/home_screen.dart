@@ -283,15 +283,18 @@ class HomeScreen extends ConsumerWidget {
                               child: InkWell(
                                 onTap: () => _openMapUrl(place.url, context),
                                 child: Row(
-                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(Icons.map, size: 16),
                                     const SizedBox(width: 4),
-                                    Text(
-                                      label,
-                                      style: const TextStyle(
-                                        color: Colors.blue,
-                                        decoration: TextDecoration.underline,
+                                    Flexible(
+                                      child: Text(
+                                        label,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.blue,
+                                          decoration: TextDecoration.underline,
+                                        ),
                                       ),
                                     ),
                                   ],
