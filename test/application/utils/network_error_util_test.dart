@@ -7,7 +7,7 @@ import 'package:walk_walk/application/utils/network_error_util.dart';
 void main() {
   group('isNetworkDnsError', () {
     test('SocketException の場合は true', () {
-      final e = SocketException('Failed host lookup: example.com');
+      const e = SocketException('Failed host lookup: example.com');
       expect(isNetworkDnsError(e), isTrue);
     });
 

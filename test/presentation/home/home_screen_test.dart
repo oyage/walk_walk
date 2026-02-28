@@ -48,8 +48,8 @@ void main() {
             ),
             guidanceHistoryProvider.overrideWith((ref) async => []),
           ],
-          child: MaterialApp(
-            home: const HomeScreen(),
+          child: const MaterialApp(
+            home: HomeScreen(),
           ),
         ),
       );

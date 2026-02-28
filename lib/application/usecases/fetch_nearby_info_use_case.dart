@@ -53,8 +53,8 @@ class FetchNearbyInfoUseCase {
     }
 
     // POI検索（skipCache でなければキャッシュ優先）。v3: Places API (New) searchNearby に移行
-    const _poiCacheKeyPrefix = 'v3';
-    final cacheKey = '$_poiCacheKeyPrefix-$geohash-$searchRadiusMeters';
+    const poiCacheKeyPrefix = 'v3';
+    final cacheKey = '$poiCacheKeyPrefix-$geohash-$searchRadiusMeters';
     String? cachedPoisJson =
         skipCache ? null : await _cacheRepository.getPlacesCache(cacheKey);
     List<PoiCandidate> pois = [];

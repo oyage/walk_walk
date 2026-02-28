@@ -443,7 +443,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             labelText: label,
             border: const OutlineInputBorder(),
           ),
-          value: value,
+          initialValue: value,
           items: items.map((item) {
             return DropdownMenuItem<T>(
               value: item,
