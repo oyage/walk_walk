@@ -58,6 +58,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _saveSettings() async {
     final repository = SettingsRepository();
     await repository.save(_settings);
+    ref.invalidate(appSettingsProvider);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('設定を保存しました')),
@@ -190,6 +191,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             helpText: '周辺の施設を検索する半径。大きいほど候補が増えます。',
           ),
           if (kDebugMode) ...[
+            const SizedBox(height: 16),
+            _buildSectionTitle('表示モード（DEV時のみ）'),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'DEV用の表示（テスト位置・デバッグ間隔など）を表示するか、本番風（Pub）表示にするかを切り替えます。',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ),
+            SwitchListTile(
+              title: const Text('DEV表示'),
+              subtitle: const Text(
+                'ON: DEV用UI表示 / OFF: Pub（本番）風表示',
+                style: TextStyle(fontSize: 12),
+              ),
+              value: _settings.showDevUi,
+              onChanged: (value) {
+                setState(() {
+                  _settings = _settings.copyWith(showDevUi: value);
+                });
+              },
+            ),
+          ],
+          if (kDebugMode && _settings.showDevUi) ...[
             const SizedBox(height: 16),
             _buildSectionTitle('テスト用位置（DEV）'),
             const Padding(
@@ -340,7 +365,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               });
             },
           ),
-          if (kDebugMode) ...[
+          if (kDebugMode && _settings.showDevUi) ...[
             const SizedBox(height: 16),
             const Padding(
               padding: EdgeInsets.only(bottom: 8),

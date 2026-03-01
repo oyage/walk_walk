@@ -62,6 +62,8 @@ class HomeScreen extends ConsumerWidget {
     final locationState = ref.watch(currentLocationProvider);
     final walkSessionState = ref.watch(walkSessionStateProvider);
     final guidanceHistoryAsync = ref.watch(guidanceHistoryProvider);
+    final settingsAsync = ref.watch(appSettingsProvider);
+    final showDevUi = settingsAsync.valueOrNull?.showDevUi ?? true;
 
     return Scaffold(
       appBar: AppBar(
@@ -110,7 +112,7 @@ class HomeScreen extends ConsumerWidget {
                     )
                   else
                     const Text('位置情報を取得できませんでした'),
-                  if (kDebugMode) ...[
+                  if (kDebugMode && showDevUi) ...[
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,

@@ -10,6 +10,7 @@ class AppSettings {
     this.useDebugInterval = false,
     this.debugIntervalSeconds = 30,
     this.useEmbeddedTts = false,
+    this.showDevUi = true,
   });
 
   final int locationUpdateIntervalSeconds; // 位置情報取得間隔（10-30分＝600-1800秒）
@@ -24,6 +25,8 @@ class AppSettings {
   final int debugIntervalSeconds;
   /// アプリ内組み込みTTSを使用するか（現在はAndroidなど対応プラットフォームのみ有効）
   final bool useEmbeddedTts;
+  /// DEV時のみ: true=DEV用UI表示, false=Pub風表示
+  final bool showDevUi;
 
   /// 実際に使う位置取得間隔（秒）。useDebugInterval が true なら debugIntervalSeconds、そうでなければ locationUpdateIntervalSeconds
   int get effectiveIntervalSeconds =>
@@ -39,6 +42,7 @@ class AppSettings {
     bool? useDebugInterval,
     int? debugIntervalSeconds,
     bool? useEmbeddedTts,
+    bool? showDevUi,
   }) {
     return AppSettings(
       locationUpdateIntervalSeconds:
@@ -54,6 +58,7 @@ class AppSettings {
       debugIntervalSeconds:
           debugIntervalSeconds ?? this.debugIntervalSeconds,
       useEmbeddedTts: useEmbeddedTts ?? this.useEmbeddedTts,
+      showDevUi: showDevUi ?? this.showDevUi,
     );
   }
 
@@ -67,6 +72,7 @@ class AppSettings {
         'useDebugInterval': useDebugInterval,
         'debugIntervalSeconds': debugIntervalSeconds,
         'useEmbeddedTts': useEmbeddedTts,
+        'showDevUi': showDevUi,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -82,6 +88,7 @@ class AppSettings {
         debugIntervalSeconds:
             json['debugIntervalSeconds'] as int? ?? 30,
         useEmbeddedTts: json['useEmbeddedTts'] as bool? ?? false,
+        showDevUi: json['showDevUi'] as bool? ?? true,
       );
 
   @override

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../domain/models/app_settings.dart';
 import '../../domain/models/guidance_message.dart';
 import '../../infrastructure/storage/database.dart' hide GuidanceMessage;
 import '../../infrastructure/storage/guidance_history_repository.dart';
@@ -55,6 +56,11 @@ final guidanceHistoryRepositoryProvider =
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepository();
+});
+
+/// アプリ設定（UIでの表示切替などに使用）。保存後に invalidate すると再読み込みされる。
+final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
+  return ref.read(settingsRepositoryProvider).load();
 });
 
 final locationServiceProvider = Provider<LocationService>((ref) {
