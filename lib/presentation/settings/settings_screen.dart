@@ -308,6 +308,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               });
             },
             _settings.ttsSpeechRate.toStringAsFixed(2),
+            divisions: 20,
             helpText: '読み上げの速さ。0が遅く、1が速い。',
           ),
           const SizedBox(height: 16),
