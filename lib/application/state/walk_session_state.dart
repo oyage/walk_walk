@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/app_settings.dart';
 import '../../domain/models/guidance_message.dart';
@@ -20,21 +22,32 @@ class WalkSessionState {
     this.isRunning = false,
     this.error,
     this.lastGuidanceMessage,
+    this.isStarting = false,
+    this.countdownSeconds,
   });
 
   final bool isRunning;
   final String? error;
   final GuidanceMessage? lastGuidanceMessage;
+  final bool isStarting;
+  final int? countdownSeconds;
 
   WalkSessionState copyWith({
     bool? isRunning,
     String? error,
     GuidanceMessage? lastGuidanceMessage,
+    bool? isStarting,
+    int? countdownSeconds,
+    bool clearCountdown = false,
   }) {
     return WalkSessionState(
       isRunning: isRunning ?? this.isRunning,
       error: error,
       lastGuidanceMessage: lastGuidanceMessage ?? this.lastGuidanceMessage,
+      isStarting: isStarting ?? this.isStarting,
+      countdownSeconds: clearCountdown
+          ? null
+          : (countdownSeconds ?? this.countdownSeconds),
     );
   }
 }
@@ -114,6 +127,43 @@ class WalkSessionNotifier extends StateNotifier<WalkSessionState> {
   WalkSessionNotifier(this._useCase) : super(const WalkSessionState());
 
   final WalkSessionUseCase _useCase;
+  Timer? _startTimer;
+
+  /// カウントダウン付きでお散歩を開始予約
+  Future<void> scheduleStartWithCountdown(int delaySeconds) async {
+    if (state.isRunning) return;
+
+    if (delaySeconds <= 0) {
+      await start();
+      return;
+    }
+
+    // 既にカウントダウン中のときは二重開始を避ける
+    if (state.isStarting) return;
+
+    _startTimer?.cancel();
+    state = state.copyWith(
+      isStarting: true,
+      countdownSeconds: delaySeconds,
+      error: null,
+      clearCountdown: false,
+    );
+
+    _startTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      final current = state.countdownSeconds ?? 0;
+      if (current <= 1) {
+        timer.cancel();
+        _startTimer = null;
+        state = state.copyWith(
+          isStarting: false,
+          clearCountdown: true,
+        );
+        await start();
+      } else {
+        state = state.copyWith(countdownSeconds: current - 1);
+      }
+    });
+  }
 
   /// お散歩を開始
   Future<void> start() async {
@@ -131,6 +181,12 @@ class WalkSessionNotifier extends StateNotifier<WalkSessionState> {
   /// お散歩を停止
   Future<void> stop() async {
     try {
+      _startTimer?.cancel();
+      _startTimer = null;
+      state = state.copyWith(
+        isStarting: false,
+        clearCountdown: true,
+      );
       await _useCase.stop();
       state = state.copyWith(isRunning: false, error: null);
     } catch (e) {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:walk_walk/application/state/walk_session_state.dart';
 import 'package:walk_walk/application/usecases/walk_session_use_case.dart';
 import 'package:walk_walk/application/usecases/fetch_nearby_info_use_case.dart';
 import 'package:walk_walk/domain/models/app_settings.dart';
@@ -139,6 +140,37 @@ void main() {
 
       verify(() => mockLocation.getCurrentLocation()).called(1);
     }, skip: 'BackgroundWorker uses NotificationService (plugin not initialized in test)');
+  });
+
+  group('WalkSessionNotifier countdown start', () {
+    test('scheduleStartWithCountdown updates state and eventually calls start', () async {
+      final useCase = WalkSessionUseCase(
+        mockLocation,
+        mockSettings,
+        mockHistory,
+        mockTts,
+        mockFormatter,
+        mockFetchNearby,
+      );
+
+      final notifier = WalkSessionNotifier(useCase);
+
+      // start() が呼ばれても内部で例外が出ないようにスタブ
+      when(() => mockSettings.load()).thenAnswer((_) async => foregroundSettings);
+      stubCommonCalls();
+
+      await notifier.scheduleStartWithCountdown(1);
+
+      // 直後はカウントダウン中
+      expect(notifier.state.isStarting, true);
+
+      // 1秒経過を待つ
+      await Future.delayed(const Duration(seconds: 2));
+
+      // カウントダウン完了後は isRunning が true になっている想定
+      expect(notifier.state.isRunning, true);
+      expect(notifier.state.isStarting, false);
+    });
   });
 
 }

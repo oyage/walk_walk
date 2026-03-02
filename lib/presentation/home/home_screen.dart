@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../application/state/location_state.dart';
 import '../../application/state/walk_session_state.dart';
+import '../../domain/models/app_settings.dart';
 import '../../infrastructure/logging/app_logger.dart';
 import '../settings/settings_screen.dart';
 
@@ -63,7 +64,9 @@ class HomeScreen extends ConsumerWidget {
     final walkSessionState = ref.watch(walkSessionStateProvider);
     final guidanceHistoryAsync = ref.watch(guidanceHistoryProvider);
     final settingsAsync = ref.watch(appSettingsProvider);
-    final showDevUi = settingsAsync.valueOrNull?.showDevUi ?? true;
+    final settings = settingsAsync.valueOrNull ?? const AppSettings();
+    final showDevUi = settings.showDevUi;
+    final startDelaySeconds = settings.effectiveIntervalSeconds;
 
     return Scaffold(
       appBar: AppBar(
@@ -183,24 +186,51 @@ class HomeScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             child: SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: walkSessionState.isRunning
-                    ? () => ref.read(walkSessionStateProvider.notifier).stop()
-                    : () => ref.read(walkSessionStateProvider.notifier).start(),
-                icon: Icon(
-                  walkSessionState.isRunning ? Icons.stop : Icons.play_arrow,
-                ),
-                label: Text(
-                  walkSessionState.isRunning ? 'お散歩停止' : 'お散歩開始',
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: walkSessionState.isRunning
-                      ? Colors.red
-                      : Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
-              ),
+              child: Builder(builder: (context) {
+                final isRunning = walkSessionState.isRunning;
+                final isStarting = walkSessionState.isStarting;
+                final notifier = ref.read(walkSessionStateProvider.notifier);
+
+                VoidCallback? onPressed;
+                IconData icon;
+                String label;
+                Color backgroundColor;
+
+                if (isRunning) {
+                  onPressed = () => notifier.stop();
+                  icon = Icons.stop;
+                  label = 'お散歩停止';
+                  backgroundColor = Colors.red;
+                } else if (isStarting) {
+                  onPressed = null;
+                  icon = Icons.hourglass_bottom;
+                  final remaining =
+                      walkSessionState.countdownSeconds ?? startDelaySeconds;
+                  label = '開始まで ${remaining} 秒';
+                  backgroundColor = Colors.grey;
+                } else {
+                  if (startDelaySeconds > 0) {
+                    onPressed =
+                        () => notifier.scheduleStartWithCountdown(startDelaySeconds);
+                  } else {
+                    onPressed = () => notifier.start();
+                  }
+                  icon = Icons.play_arrow;
+                  label = 'お散歩開始';
+                  backgroundColor = Colors.blue;
+                }
+
+                return ElevatedButton.icon(
+                  onPressed: onPressed,
+                  icon: Icon(icon),
+                  label: Text(label),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: backgroundColor,
+                    foregroundColor: Colors.white,
+                  ),
+                );
+              }),
             ),
           ),
           // セッション状態表示

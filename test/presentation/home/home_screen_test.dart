@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:walk_walk/application/state/location_state.dart';
 import 'package:walk_walk/application/state/walk_session_state.dart';
 import 'package:walk_walk/application/usecases/walk_session_use_case.dart';
+import 'package:walk_walk/domain/models/app_settings.dart';
 import 'package:walk_walk/domain/models/geo_point.dart';
 import 'package:walk_walk/domain/models/location_sample.dart';
 import 'package:walk_walk/infrastructure/location/location_service.dart';
@@ -30,7 +31,7 @@ void main() {
       when(() => mockLocationService.openAppSettings()).thenAnswer((_) async => false);
     });
 
-    Future<void> pumpHome(WidgetTester tester, {CurrentLocationState? locationState, WalkSessionState? walkState}) async {
+    Future<void> pumpHome(WidgetTester tester, {CurrentLocationState? locationState, WalkSessionState? walkState, AppSettings? settings}) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -47,6 +48,7 @@ void main() {
               ),
             ),
             guidanceHistoryProvider.overrideWith((ref) async => []),
+            appSettingsProvider.overrideWith((ref) async => settings ?? const AppSettings()),
           ],
           child: const MaterialApp(
             home: HomeScreen(),
@@ -90,6 +92,19 @@ void main() {
     testWidgets('「お散歩開始」ボタンが表示される', (tester) async {
       await pumpHome(tester);
       expect(find.text('お散歩開始'), findsOneWidget);
+    });
+
+    testWidgets('停止中に「お散歩開始」を押すとカウントダウン表示になる', (tester) async {
+      const testSettings = AppSettings(locationUpdateIntervalSeconds: 900);
+
+      await pumpHome(tester, settings: testSettings);
+      expect(find.text('お散歩開始'), findsOneWidget);
+
+      await tester.tap(find.text('お散歩開始'));
+      await tester.pump();
+
+      // カウントダウンテキストが表示され、ボタンは無効化されている想定
+      expect(find.textContaining('開始まで'), findsOneWidget);
     });
 
     testWidgets('お散歩中は「お散歩停止」ボタンと状態表示が出る', (tester) async {
