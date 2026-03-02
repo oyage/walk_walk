@@ -127,7 +127,16 @@ class WalkSessionNotifier extends StateNotifier<WalkSessionState> {
   WalkSessionNotifier(this._useCase) : super(const WalkSessionState());
 
   final WalkSessionUseCase _useCase;
-  Timer? _startTimer;
+  Timer? _countdownTimer;
+  int? _countdownIntervalSeconds;
+  bool _pendingStart = false;
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+    super.dispose();
+  }
 
   /// カウントダウン付きでお散歩を開始予約
   Future<void> scheduleStartWithCountdown(int delaySeconds) async {
@@ -141,7 +150,10 @@ class WalkSessionNotifier extends StateNotifier<WalkSessionState> {
     // 既にカウントダウン中のときは二重開始を避ける
     if (state.isStarting) return;
 
-    _startTimer?.cancel();
+    _countdownIntervalSeconds = delaySeconds;
+    _pendingStart = true;
+
+    _countdownTimer?.cancel();
     state = state.copyWith(
       isStarting: true,
       countdownSeconds: delaySeconds,
@@ -149,18 +161,44 @@ class WalkSessionNotifier extends StateNotifier<WalkSessionState> {
       clearCountdown: false,
     );
 
-    _startTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      final current = state.countdownSeconds ?? 0;
-      if (current <= 1) {
-        timer.cancel();
-        _startTimer = null;
+    _countdownTimer =
+        Timer.periodic(const Duration(seconds: 1), (timer) async {
+      final interval = _countdownIntervalSeconds ?? delaySeconds;
+      final current = state.countdownSeconds ?? interval;
+      final next = current - 1;
+
+      if (next > 0) {
+        state = state.copyWith(countdownSeconds: next);
+        return;
+      }
+
+      // 0 秒到達時の処理
+      if (_pendingStart) {
+        _pendingStart = false;
+        await start();
+
+        // start() が失敗した場合は isRunning が true にならない想定なので、その場合はカウントダウンも終了
+        if (!state.isRunning) {
+          timer.cancel();
+          _countdownTimer = null;
+          state = state.copyWith(
+            isStarting: false,
+            clearCountdown: true,
+          );
+          return;
+        }
+
+        // 正常に開始できた場合は、開始待ちフラグを下ろしつつ次の周期までのカウントダウンをセット
         state = state.copyWith(
           isStarting: false,
-          clearCountdown: true,
+          countdownSeconds: interval,
+          clearCountdown: false,
         );
-        await start();
       } else {
-        state = state.copyWith(countdownSeconds: current - 1);
+        // お散歩中の「次の取得まで」のカウントダウンを繰り返す
+        state = state.copyWith(
+          countdownSeconds: interval,
+        );
       }
     });
   }
@@ -181,8 +219,10 @@ class WalkSessionNotifier extends StateNotifier<WalkSessionState> {
   /// お散歩を停止
   Future<void> stop() async {
     try {
-      _startTimer?.cancel();
-      _startTimer = null;
+      _countdownTimer?.cancel();
+      _countdownTimer = null;
+      _pendingStart = false;
+      _countdownIntervalSeconds = null;
       state = state.copyWith(
         isStarting: false,
         clearCountdown: true,

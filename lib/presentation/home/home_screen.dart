@@ -188,7 +188,6 @@ class HomeScreen extends ConsumerWidget {
               width: double.infinity,
               child: Builder(builder: (context) {
                 final isRunning = walkSessionState.isRunning;
-                final isStarting = walkSessionState.isStarting;
                 final notifier = ref.read(walkSessionStateProvider.notifier);
 
                 VoidCallback? onPressed;
@@ -201,17 +200,10 @@ class HomeScreen extends ConsumerWidget {
                   icon = Icons.stop;
                   label = 'お散歩停止';
                   backgroundColor = Colors.red;
-                } else if (isStarting) {
-                  onPressed = null;
-                  icon = Icons.hourglass_bottom;
-                  final remaining =
-                      walkSessionState.countdownSeconds ?? startDelaySeconds;
-                  label = '開始まで ${remaining} 秒';
-                  backgroundColor = Colors.grey;
                 } else {
                   if (startDelaySeconds > 0) {
-                    onPressed =
-                        () => notifier.scheduleStartWithCountdown(startDelaySeconds);
+                    onPressed = () =>
+                        notifier.scheduleStartWithCountdown(startDelaySeconds);
                   } else {
                     onPressed = () => notifier.start();
                   }
@@ -233,6 +225,23 @@ class HomeScreen extends ConsumerWidget {
               }),
             ),
           ),
+          // カウントダウン表示（ボタンとは別表示）
+          if (walkSessionState.countdownSeconds != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  walkSessionState.isRunning
+                      ? '次の取得まで ${walkSessionState.countdownSeconds} 秒'
+                      : '開始まで ${walkSessionState.countdownSeconds} 秒',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ),
+            ),
           // セッション状態表示
           if (walkSessionState.isRunning)
             Container(

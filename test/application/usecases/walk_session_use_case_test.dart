@@ -159,17 +159,20 @@ void main() {
       when(() => mockSettings.load()).thenAnswer((_) async => foregroundSettings);
       stubCommonCalls();
 
-      await notifier.scheduleStartWithCountdown(1);
+      await notifier.scheduleStartWithCountdown(2);
 
       // 直後はカウントダウン中
       expect(notifier.state.isStarting, true);
+      expect(notifier.state.countdownSeconds, 2);
 
-      // 1秒経過を待つ
-      await Future.delayed(const Duration(seconds: 2));
+      // 2秒経過を待つ（0 到達 → start 呼び出し）
+      await Future.delayed(const Duration(seconds: 3));
 
       // カウントダウン完了後は isRunning が true になっている想定
       expect(notifier.state.isRunning, true);
       expect(notifier.state.isStarting, false);
+      // お散歩開始後も次の周期に向けて countdownSeconds が再セットされている想定
+      expect(notifier.state.countdownSeconds, isNotNull);
     });
   });
 
