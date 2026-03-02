@@ -37,6 +37,11 @@ class TtsService {
 
     await _flutterTts!.setLanguage(settings.ttsLanguage);
     await _flutterTts!.setSpeechRate(settings.ttsSpeechRate);
+    if (settings.ttsVoice != null && settings.ttsVoice!.isNotEmpty) {
+      await _flutterTts!.setVoice(settings.ttsVoice!);
+    } else {
+      await _flutterTts!.clearVoice();
+    }
     _isSpeaking = true;
     await _flutterTts!.speak(text);
   }
@@ -52,5 +57,19 @@ class TtsService {
   /// 読み上げ中かどうか
   Future<bool> isSpeaking() async {
     return _isSpeaking;
+  }
+
+  /// 利用可能な音声一覧を取得（Android / iOS / macOS で対応。未対応時は null）
+  Future<List<dynamic>?> getVoices() async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+    if (_flutterTts == null) return null;
+    try {
+      final result = await _flutterTts!.getVoices;
+      return result as List<dynamic>?;
+    } catch (_) {
+      return null;
+    }
   }
 }

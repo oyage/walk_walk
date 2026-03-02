@@ -15,9 +15,22 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
+/// getVoices が利用できるプラットフォーム（Android / iOS / macOS）
+bool get _supportsTtsVoiceList {
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+    case TargetPlatform.iOS:
+    case TargetPlatform.macOS:
+      return true;
+    default:
+      return false;
+  }
+}
+
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late AppSettings _settings;
   bool _isLoading = true;
+  Future<List<dynamic>?>? _ttsVoicesFuture;
   final TextEditingController _testLatController = TextEditingController();
   final TextEditingController _testLngController = TextEditingController();
 
@@ -141,6 +154,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         appBar: AppBar(title: const Text('設定')),
         body: const Center(child: CircularProgressIndicator()),
       );
+    }
+
+    if (_supportsTtsVoiceList && _ttsVoicesFuture == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _ttsVoicesFuture = ref.read(ttsServiceProvider).getVoices();
+          });
+        }
+      });
     }
 
     return Scaffold(
@@ -323,6 +346,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
             helpText: '読み上げに使う言語（ja=日本語、en=英語）。',
           ),
+          if (_supportsTtsVoiceList) ...[
+            const SizedBox(height: 16),
+            _buildTtsVoiceDropdown(),
+          ],
           const SizedBox(height: 16),
           if (defaultTargetPlatform == TargetPlatform.android)
             SwitchListTile(
@@ -469,7 +496,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             labelText: label,
             border: const OutlineInputBorder(),
           ),
-          initialValue: value,
+          value: value,
           items: items.map((item) {
             return DropdownMenuItem<T>(
               value: item,
@@ -479,6 +506,94 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           onChanged: onChanged,
         ),
       ],
+    );
+  }
+
+  /// 保存済みの音声設定と一覧の要素が同じ音声かどうか
+  static bool _voiceMatches(Map<String, String>? saved, Map<String, String> v) {
+    if (saved == null || saved.isEmpty) return false;
+    final idA = saved['identifier'];
+    final idB = v['identifier'];
+    if (idA != null && idB != null && idA == idB) return true;
+    return saved['name'] == v['name'] && saved['locale'] == v['locale'];
+  }
+
+  /// 一覧から保存済み設定に一致する音声を探す（ドロップダウンの value 用）
+  static Map<String, String>? _findMatchingVoice(
+    Map<String, String>? saved,
+    List<Map<String, String>> list,
+  ) {
+    if (saved == null || saved.isEmpty) return null;
+    for (final v in list) {
+      if (_voiceMatches(saved, v)) return v;
+    }
+    return null;
+  }
+
+  Widget _buildTtsVoiceDropdown() {
+    final future = _ttsVoicesFuture;
+    if (future == null) {
+      return const SizedBox.shrink();
+    }
+    return FutureBuilder<List<dynamic>?>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('音声一覧を読み込み中…', style: TextStyle(fontSize: 12)),
+          );
+        }
+        final raw = snapshot.data;
+        if (raw == null || raw.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final allVoices = raw
+            .map((e) => Map<String, String>.from(e as Map))
+            .toList();
+        final lang = _settings.ttsLanguage;
+        final voices = allVoices.where((v) {
+          final locale = v['locale'] ?? '';
+          return locale.startsWith('$lang-') || locale == lang;
+        }).toList();
+        final items = <Map<String, String>?>[null];
+        items.addAll(voices);
+        final selectedValue = _findMatchingVoice(_settings.ttsVoice, voices);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'TTS言語に合わせて利用可能な音声を表示します。未対応の環境では表示されません。',
+                style: _helpTextStyle,
+              ),
+            ),
+            DropdownButtonFormField<Map<String, String>?>(
+              decoration: const InputDecoration(
+                labelText: 'TTS音声',
+                border: OutlineInputBorder(),
+              ),
+              value: selectedValue,
+              items: items.map((v) {
+                return DropdownMenuItem<Map<String, String>?>(
+                  value: v,
+                  child: Text(
+                    v == null
+                        ? 'デフォルト'
+                        : '${v['name'] ?? ''} (${v['locale'] ?? ''})',
+                  ),
+                );
+              }).toList(),
+              onChanged: (v) {
+                setState(() {
+                  _settings = _settings.copyWith(ttsVoice: v);
+                });
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }
