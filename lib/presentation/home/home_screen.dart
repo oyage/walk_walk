@@ -187,7 +187,8 @@ class HomeScreen extends ConsumerWidget {
             child: SizedBox(
               width: double.infinity,
               child: Builder(builder: (context) {
-                final isRunning = walkSessionState.isRunning;
+                final isActive =
+                    walkSessionState.isRunning || walkSessionState.isStarting;
                 final notifier = ref.read(walkSessionStateProvider.notifier);
 
                 VoidCallback? onPressed;
@@ -195,7 +196,7 @@ class HomeScreen extends ConsumerWidget {
                 String label;
                 Color backgroundColor;
 
-                if (isRunning) {
+                if (isActive) {
                   onPressed = () => notifier.stop();
                   icon = Icons.stop;
                   label = 'お散歩停止';

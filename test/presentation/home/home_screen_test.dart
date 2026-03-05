@@ -94,7 +94,7 @@ void main() {
       expect(find.text('お散歩開始'), findsOneWidget);
     });
 
-    testWidgets('停止中に「お散歩開始」を押すとカウントダウン表示が別表示で出る', (tester) async {
+    testWidgets('停止中に「お散歩開始」を押すとカウントダウン表示が出てボタンは「お散歩停止」になる', (tester) async {
       const testSettings = AppSettings(locationUpdateIntervalSeconds: 900);
 
       await pumpHome(tester, settings: testSettings);
@@ -105,7 +105,8 @@ void main() {
 
       // カウントダウンテキストが表示される（ボタン自体のラベルには秒数を含めない）
       expect(find.textContaining('開始まで'), findsOneWidget);
-      expect(find.text('お散歩開始'), findsOneWidget);
+      // ボタンはカウントダウン中も「お散歩停止」表示になる
+      expect(find.text('お散歩停止'), findsOneWidget);
     });
 
     testWidgets('お散歩中は「お散歩停止」ボタンと状態表示が出る', (tester) async {
